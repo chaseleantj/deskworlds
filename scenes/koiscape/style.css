@@ -1,0 +1,3 @@
+@import url("../../ui/scene.css");
+/* The pond is dark green water going to black, and the page around it is the same dark. */
+:root { --background: #050a08; }

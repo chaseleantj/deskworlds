@@ -1,0 +1,6 @@
+@import url("../../ui/scene.css");
+/* The globe sits in a dark room: the page around it is the same black. */
+:root { --background: #000; }
+html:not([data-motion="host"]) #scene { touch-action: none; cursor: none; }
+/* No words on screen; the loading and error boxes stay empty until something goes wrong. */
+#loading { display: block; }

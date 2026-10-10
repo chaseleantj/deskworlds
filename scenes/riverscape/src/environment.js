@@ -18,6 +18,8 @@ import {
   CURRENT_SPEED,
 } from "./water.js";
 
+import { proceduralSurfaceShader, surfaceNoiseGLSL } from "./surfaces.js";
+
 const TAU = Math.PI * 2;
 
 // Moss and algae settle where light reaches, where the current is sheltered, and where the
@@ -195,17 +197,9 @@ const mossGLSL = /* glsl */ `
   uniform vec3 mossTurf;
   float gMoss = 0.0;
   vec3 gMossColor = vec3(0.0);
-  float mossHash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
-  float mossNoise(vec3 p) {
-    vec3 i = floor(p), f = fract(p);
-    f = f * f * (3.0 - 2.0 * f);
-    return mix(
-      mix(mix(mossHash(i), mossHash(i + vec3(1, 0, 0)), f.x), mix(mossHash(i + vec3(0, 1, 0)), mossHash(i + vec3(1, 1, 0)), f.x), f.y),
-      mix(mix(mossHash(i + vec3(0, 0, 1)), mossHash(i + vec3(1, 0, 1)), f.x), mix(mossHash(i + vec3(0, 1, 1)), mossHash(i + vec3(1, 1, 1)), f.x), f.y),
-      f.z);
-  }
+  ${surfaceNoiseGLSL}
 `;
-function mossLayer(material, film, turf) {
+function mossLayer(material, film, turf, kind) {
   material.onBeforeCompile = (shader) => {
     shader.uniforms.mossFilm = { value: new THREE.Color(film) };
     shader.uniforms.mossTurf = { value: new THREE.Color(turf) };
@@ -223,7 +217,7 @@ function mossLayer(material, film, turf) {
         #include <color_fragment>
         vec3 mossFuzz = vec3(0.0);
         if (vMoss > 0.02) {
-          float mossFine = mossNoise(vWaterPosition * 9.0) * 0.6 + mossNoise(vWaterPosition * 27.0) * 0.4;
+          float mossFine = surfaceNoise(vWaterPosition * 9.0) * 0.6 + surfaceNoise(vWaterPosition * 27.0) * 0.4;
           gMoss = smoothstep(0.07, 0.5, vMoss + (mossFine - 0.5) * 0.45);
           gMossColor = mix(mossFilm, mossTurf, smoothstep(0.15, 0.85, vMoss)) * (0.6 + 0.8 * mossFine);
           // Growth lies in the same shade as the surface it grows on: the pit of a stone,
@@ -232,7 +226,7 @@ function mossLayer(material, film, turf) {
             gMossColor *= vColor;
           #endif
           diffuseColor.rgb = mix(diffuseColor.rgb, gMossColor, gMoss);
-          mossFuzz = vec3(mossFine - 0.5, mossNoise(vWaterPosition * 31.0 + 7.0) - 0.5, fract(mossFine * 7.0) - 0.5);
+          mossFuzz = vec3(mossFine - 0.5, surfaceNoise(vWaterPosition * 31.0 + 7.0) - 0.5, fract(mossFine * 7.0) - 0.5);
         }
       `,
       )
@@ -255,36 +249,21 @@ function mossLayer(material, film, turf) {
         reflectedLight.indirectDiffuse += gMoss * grazing * gMossColor * 0.6;
       `,
       );
+    proceduralSurfaceShader(shader, kind);
     waterLitShader(shader);
   };
-  material.customProgramCacheKey = () => "mossy-surface-v3";
+  material.customProgramCacheKey = () => `procedural-mossy-${kind}-v1`;
   return material;
 }
 
 // A young film of algae is olive and thin; established turf is dark green. The film on
 // sand is browner (diatoms) than on stone and wood.
-async function surface(loader, name, repeat, color, film, turf = "#0b1e08") {
-  const [map, normalMap] = await Promise.all([
-    loader.loadAsync(`assets/${name}_diff.jpg`),
-    loader.loadAsync(`assets/${name}_nor_gl.jpg`),
-  ]);
-  map.colorSpace = THREE.SRGBColorSpace;
-  for (const texture of [map, normalMap]) {
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(...repeat);
-    texture.anisotropy = 8;
-  }
+function surface(kind, film, turf = "#0b1e08") {
   return mossLayer(
-    new THREE.MeshStandardMaterial({
-      map,
-      normalMap,
-      color,
-      roughness: 0.92,
-      normalScale: new THREE.Vector2(0.65, 0.65),
-      vertexColors: true,
-    }),
+    new THREE.MeshStandardMaterial({ roughness: 1, vertexColors: true }),
     film,
     turf,
+    kind,
   );
 }
 
@@ -426,7 +405,7 @@ function branchGeometry(points, baseRadius, tipRadius, seed) {
         .addScaledVector(frames.binormals[i], Math.sin(a));
       const v = p.clone().addScaledVector(radial, r);
       positions.push(v.x, v.y, v.z);
-      uv.push(j / cols, length * t * 0.32);
+      uv.push(j / cols, length * t);
       const tint =
         (0.7 + weather * 0.27 + ridges * 0.7 - channel) *
         (1 - Math.min(0.6, splitDepth * 1.5));
@@ -592,17 +571,10 @@ function plantFronds(scene, groups) {
   scene.add(fronds);
 }
 
-export async function createEnvironment(scene) {
-  const loader = new THREE.TextureLoader();
-  const [rockMaterial, woodMaterial, sandMaterial] = await Promise.all([
-    surface(loader, "rock_boulder_dry", [1.8, 1.4], 0x62665d, "#2e4315"),
-    surface(loader, "rough_wood", [2.1, 1.4], 0xc3ad8e, "#334a16"),
-    surface(loader, "sand_01", [10, 6], 0xf4e5c8, "#5a5a26", "#23401a"),
-  ]);
-  rockMaterial.normalScale.set(0.85, 0.85);
-  woodMaterial.roughness = 0.86;
-  woodMaterial.normalScale.set(0.8, 0.8);
-  sandMaterial.normalScale.set(0.32, 0.32);
+export function createEnvironment(scene) {
+  const rockMaterial = surface("rock", "#2e4315");
+  const woodMaterial = surface("wood", "#334a16");
+  const sandMaterial = surface("sand", "#5a5a26", "#23401a");
 
   const rocks = ROCKS;
   const woodBase = vec(...BRANCHES[0].p[0]);
@@ -674,16 +646,10 @@ export async function createEnvironment(scene) {
   const landmarks = [];
   const rockSamples = [];
   // The pale stone is a lighter piece of the same rock, not a second kind of stone.
-  const pale = mossLayer(rockMaterial.clone(), "#2e4315", "#0b1e08");
-  pale.color.set(0x8f8b7c);
+  const pale = mossLayer(rockMaterial.clone(), "#2e4315", "#0b1e08", "rock");
+  pale.color.setRGB(1.75, 1.6, 1.35);
   rocks.forEach((r, i) => {
     const geometry = rockGeometry(i * 2.63);
-    // The stone map was tuned on a stone about a unit across; a bigger stone repeats it
-    // more, so its grain stays as fine as a small stone's instead of stretching.
-    const grain = Math.max(0.8, (r.rx + r.ry + r.rz) / 3.3);
-    const uv = geometry.attributes.uv;
-    for (let k = 0; k < uv.count; k++)
-      uv.setXY(k, uv.getX(k) * grain, uv.getY(k) * grain);
     const mesh = new THREE.Mesh(geometry, r.pale ? pale : rockMaterial);
     mesh.scale.set(r.rx, r.ry, r.rz);
     mesh.position.set(r.x, rockCenterY(r), r.z);

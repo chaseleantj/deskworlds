@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-// Both habitats render linear HDR color and depth, then composite once to the display.
+// Both scenes render linear HDR color and depth, then composite once to the display.
 export function createPostprocessing(camera, { samples = 4, uniforms = {}, fragmentShader }) {
   const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples });
   target.depthTexture = new THREE.DepthTexture(1, 1, THREE.UnsignedIntType);

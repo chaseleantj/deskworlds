@@ -2,7 +2,7 @@
 // to this benchmark: normal animation never blocks on the GPU or allocates sample logs.
 export function installDiagnostics({ renderer, loop, renderFrame, stats }) {
   let busy = false;
-  window.habitatBenchmark = async ({ frames = 120, warmup = 30, simulationFps = 60 } = {}) => {
+  window.sceneBenchmark = async ({ frames = 120, warmup = 30, simulationFps = 60 } = {}) => {
     if (busy) throw new Error('A benchmark is already running.');
     if (![frames, warmup, simulationFps].every(Number.isFinite) ||
         frames < 1 || frames > 3600 || warmup < 0 || warmup > 600 ||
@@ -57,7 +57,7 @@ export function installDiagnostics({ renderer, loop, renderFrame, stats }) {
         meanDrawCalls: calls / durations.length, meanTriangles: triangles / durations.length,
         settings: stats(), durations,
       };
-      console.info('Habitat benchmark', result);
+      console.info('Scene benchmark', result);
       return result;
     } finally {
       busy = false;

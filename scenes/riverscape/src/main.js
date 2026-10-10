@@ -12,7 +12,7 @@ import { createFrameLoop } from "../../shared/frame-loop.js";
 import { renderSettings, framebufferSize } from "./render-policy.js";
 
 const canvas = document.querySelector("#scene");
-const habitat = document.querySelector("#habitat");
+const stage = document.querySelector("#stage");
 const loading = document.querySelector("#loading");
 // A page that says the host owns its motion leaves the system's reduced-motion
 // preference to the host, which is the only one that can offer a way back: the wallpaper
@@ -30,14 +30,14 @@ let onBattery = false;
 let settings = renderSettings({ profile, wallpaper, pixelRatio: devicePixelRatio });
 let requestedRate = 60;
 let loop = null, applyPower = null, updateControls = () => {};
-window.habitatPause = (value) => { paused = Boolean(value); loop?.setPaused(paused); updateControls(); };
-window.habitatRate = (fps) => {
+window.scenePause = (value) => { paused = Boolean(value); loop?.setPaused(paused); updateControls(); };
+window.sceneRate = (fps) => {
   requestedRate = Number.isFinite(fps) && fps > 0 ? Math.min(120, fps) : 0;
   loop?.setRate(frameRate(profile, requestedRate, onBattery));
   updateControls();
 };
 // Geometry never changes on a power transition: no plant popping or regeneration.
-window.habitatPower = (battery) => {
+window.scenePower = (battery) => {
   const next = Boolean(battery);
   if (next === onBattery) return;
   onBattery = next;
@@ -51,7 +51,7 @@ window.habitatPower = (battery) => {
 // whichever of the two reasons it is still for: pellets nobody is drawing are pellets the
 // fish never see, and they would all arrive at once whenever the water started again.
 let sprinkle = null;
-window.habitatFeed = () => {
+window.sceneFeed = () => {
   if (sprinkle && loop?.state.running) sprinkle();
 };
 
@@ -153,7 +153,7 @@ async function start() {
   backboard.position.set(0, 7, -7.2);
   backboard.receiveShadow = true;
   scene.add(backboard);
-  const { obstacles, landmarks } = await createEnvironment(scene);
+  const { obstacles, landmarks } = createEnvironment(scene);
   const plants = createPlants(scene, {
     ...settings, animatedShadows: profile !== "reference",
   });
@@ -198,7 +198,7 @@ async function start() {
     }
   }
   const resizeObserver = new ResizeObserver(resize);
-  resizeObserver.observe(habitat);
+  resizeObserver.observe(stage);
   window.addEventListener("resize", resize);
   document.addEventListener("visibilitychange", visibility);
   canvas.addEventListener("webglcontextlost", (event) => {
@@ -279,9 +279,9 @@ async function start() {
   };
 
   updateControls = installControls({
-    habitat, isPaused: () => paused,
+    stage, isPaused: () => paused,
     isRunning: () => Boolean(loop?.state.running),
-    pause: window.habitatPause, feed: window.habitatFeed,
+    pause: window.scenePause, feed: window.sceneFeed,
     quality: () => profile === 'reference' ? 'detail' : profile,
     setQuality(value) {
       profile = qualityName(value);
@@ -335,7 +335,7 @@ async function start() {
     fps: frameRate(profile, requestedRate, onBattery), paused, hidden: document.hidden || zeroSize || contextLost,
   });
   updateControls();
-  window.habitatStats = () => ({
+  window.sceneStats = () => ({
     profile, onBattery, resolution: settings.resolution,
     framebuffer: [target.width, target.height], samples: target.samples,
     shadowSize: settings.shadowSize,
@@ -347,7 +347,7 @@ async function start() {
   // Diagnostics are opt-in: no timing queries, synchronization or arrays in normal use.
   if (query.get("diagnostics") === "1") {
     const { installDiagnostics } = await import("../../shared/diagnostics.js");
-    installDiagnostics({ renderer, loop, renderFrame, stats: window.habitatStats });
+    installDiagnostics({ renderer, loop, renderFrame, stats: window.sceneStats });
   }
   window.addEventListener("pagehide", () => {
     loop.setHidden(true);

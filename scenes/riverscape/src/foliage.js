@@ -84,7 +84,9 @@ export function foliageMaterial() {
       // leaves do not clip to white specks.
       float midrib = (1.0 - smoothstep(.008, .035, abs(leafUv.x - .5))) * (1.0 - smoothstep(.02, .06, fwidth(leafUv.x)));
       float veins = pow(.5 + .5 * cos((leafUv.y - abs(leafUv.x - .5) * .32) * 155.0), 22.0);
-      float edge = pow(abs(leafUv.x - .5) * 2.0, 5.0);
+      // MSAA shades edge pixels at the pixel centre, where leafUv extrapolates past 0..1;
+      // unclamped, this goes hugely negative and ACES turns it into white/black specks.
+      float edge = pow(min(abs(leafUv.x - .5) * 2.0, 1.0), 5.0);
       float mottling = .965 + .035 * sin(leafUv.y * 64.0 + sin(leafUv.x * 25.0));
       diffuseColor.rgb *= mottling * (1.0 - .09 * edge + .12 * veins);
       diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 1.22 + vec3(.008,.012,0.), midrib * .6);

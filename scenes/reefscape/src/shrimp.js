@@ -33,16 +33,18 @@ export function createShrimp(scene, simulation) {
   for(let index=0;index<simulation.shrimp.length;index++) {
     const root=new THREE.Group(),bodyParts=[],legs=[],antennae=[];
     const carapace=sphere([.08,.15,0],[.235,.085,.091],'#d45338');
-    // Broad reflective dorsal stripe down a red carapace, not painted glowing eyes.
-    tint(carapace,p=>new THREE.Color(p.y>.173?(Math.abs(p.z)<.025?'#eae5ce':'#b4543e'):'#bd9a7c'));
+    // Lysmata amboinensis: a scarlet band down each side of the back, split by a narrow
+    // white median stripe, over pale translucent-yellow flanks.
+    tint(carapace,p=>new THREE.Color(Math.abs(p.z)<.019&&p.y>.212?'#f3efe3':p.y>.148?'#b82019':'#dcc39a'));
     bodyParts.push(carapace);
     for(let i=0;i<6;i++){
       const x=-.12-i*.060,y=.13-Math.pow(i/5,2)*.10;
       const g=sphere([x,y,0],[.070-i*.003,.061-i*.004,.069-i*.005],'#c9543f');
-      tint(g,p=>new THREE.Color(Math.abs(p.z)<.022&&p.y>y+.021?'#efe7cc':p.y>y+.022?'#b65e45':p.x<x-.043?'#a78669':'#cfb092'));bodyParts.push(g);
+      tint(g,p=>new THREE.Color(Math.abs(p.z)<.018&&p.y>y+.040?'#f3efe3':p.y>y+.004?'#b82019':p.x<x-.043?'#bba07c':'#dcc39a'));bodyParts.push(g);
     }
-    // Telson + paired uropods; overlap the sixth segment without a gap.
-    for(let side=-1;side<=1;side++)bodyParts.push(sphere([-.50,-.006,side*.069],[.103,.016,.049],side===0?'#d56345':'#eddbb7'));
+    // Telson + paired uropods; overlap the sixth segment without a gap. The fan is red
+    // with white tips on the uropods.
+    for(let side=-1;side<=1;side++){const g=sphere([-.50,-.006,side*.069],[.103,.016,.049],'#b82019');tint(g,p=>new THREE.Color(side&&p.x<-.55?'#f3efe3':'#b82019'));bodyParts.push(g);}
     bodyParts.push(tube([V(.25,.17,0),V(.38,.20,0),V(.42,.24,0)],[.020,.012,.001],6));
     for(const sign of [-1,1]){
       bodyParts.push(tube([V(.22,.19,sign*.045),V(.26,.25,sign*.087)],[.016,.014],6));
@@ -63,10 +65,10 @@ export function createShrimp(scene, simulation) {
         const x=.18-j*.068;
         const [path,radii]=j<2?carried[j]
           :[[V(x,.105,sign*.042),V(x-.06,.06,sign*(.15+j*.010)),foot(j,sign)],[.009,.008,.003]];
-        legs.push(tint(limb(path,radii,j),()=>new THREE.Color(j<2?'#e9cca8':'#e3b597')));
+        legs.push(tint(limb(path,radii,j),()=>new THREE.Color(j<2?'#f1ebdf':'#eadfcc')));
       }
       // Third maxillipeds under the head: the grooming appendages, small and never still.
-      legs.push(tint(limb([V(.14,.075,sign*.040),V(.19,-.005,sign*.062),V(.225,-.075,sign*.050)],[.010,.008,.003],5),()=>new THREE.Color('#e9cca8')));
+      legs.push(tint(limb([V(.14,.075,sign*.040),V(.19,-.005,sign*.062),V(.225,-.075,sign*.050)],[.010,.008,.003],5),()=>new THREE.Color('#f1ebdf')));
       // Five pairs of pleopods under the first five abdominal somites. They are a short
       // fringe tucked against the belly, not a second row of legs, and they read from the
       // side or when the animal is off the rock; their wave is what says it is alive rather
@@ -82,7 +84,7 @@ export function createShrimp(scene, simulation) {
           pts.push(V(.25+s*len*(j===2?.66:.95),.23+s*(.66-j*.23)-.26*s*s,sign*(.075+s*(.30+j*.18))));
           radii.push(.010*(1-s*.86));
         }
-        antennae.push(tint(limb(pts,radii,j),()=>new THREE.Color('#ede4c9')));
+        antennae.push(tint(limb(pts,radii,j),()=>new THREE.Color('#f4f0e6')));
       }
     }
     // One wrapped two-second clock drives every small rhythm on the animal, so their rates
@@ -128,9 +130,9 @@ export function createShrimp(scene, simulation) {
           transformed.xy=vec2(.155+arm.x*cos(bend)-arm.y*sin(bend),.075+arm.x*sin(bend)+arm.y*cos(bend));
           transformed.z*=1.-.30*max(0.,bend);
           // The advertisement itself. Caves found L. amboinensis signals by rocking this
-          // white front pair fore and aft at a few hertz — not by swaying its whole body —
-          // and rocks hardest at the big dark clients that are worth the risk of cleaning.
-          transformed.x+=sin(25.13*shrimpGait.w)*.024*shrimpPose.x*fold*(1.-.5*code);
+          // white front pair fore and aft — not by swaying its whole body — and rocks hardest
+          // at the big dark clients that are worth the risk of cleaning.
+          transformed.x+=sin(9.425*shrimpGait.w)*.018*shrimpPose.x*fold*(1.-.5*code);
         }
         // 5 Hz: the mouthparts flicker far faster than anything else the animal does.
         if(code>4.5&&code<5.5)transformed+=vec3(.012,.009,0.)*sin(31.42*shrimpGait.w+side*1.7)*tip;
@@ -149,15 +151,15 @@ export function createShrimp(scene, simulation) {
       begin:`float along=uv.y,side=sign(position.z),tip=along*along,antenna=step(uv.x,.5);
         vec2 flow=reefResponse(modelMatrix[3].xyz,reefTime,.19);
         // The long white antennae are the advertisement, and they are read from across the
-        // tank: whipping them precedes four cleans in five. They lash forward at about two
-        // hertz while the animal is signalling and lie swept back when it is not.
-        float sweep=sin(12.566*shrimpGait.w+side*.9)*shrimpPose.x*antenna;
+        // tank: whipping them precedes four cleans in five. They sweep forward about once a
+        // second while the animal is signalling and lie swept back when it is not.
+        float sweep=sin(6.2832*shrimpGait.w+side*.9)*shrimpPose.x*antenna;
         // An antennule flick is a hard downstroke and a lazy return, roughly one to three —
         // the asymmetry is what traps a discrete parcel of water for the aesthetascs.
         float p=fract(shrimpGait.w*2.),snap=(p<.22?p/.22:1.-(p-.22)/.78)*shrimpPose.y*(1.-antenna);
-        transformed.z+=(sweep*side*.14+flow.y*.20)*tip;
+        transformed.z+=(sweep*side*.09+flow.y*.20)*tip;
         // L. amboinensis taps a client with its antennae before anything else touches it.
-        transformed.y+=(sweep*.11-snap*.11+flow.x*.15+shrimpPose.z*(.30+.12*sin(12.566*shrimpGait.w)))*tip;
+        transformed.y+=(sweep*.11-snap*.11+flow.x*.15+shrimpPose.z*(.30+.12*sin(6.2832*shrimpGait.w)))*tip;
         transformed.x-=(snap*.035+(1.-shrimpPose.x)*.09*antenna+shrimpPose.w*.22)*tip;`}));
     root.add(new THREE.Mesh(merge(antennae),antennaMat));
     scene.add(root);models.push({root,gait,pose,feet});
@@ -169,7 +171,7 @@ export function createShrimp(scene, simulation) {
     // the legs, and reaching for a client lifts the whole front of the animal, so both are
     // rotations of the body rather than offsets bolted onto it.
     tilt.setFromAxisAngle(across,pose.pitch);turn.setFromAxisAngle(up,s.yaw);
-    rock.setFromAxisAngle(ahead,s.sway*.28-pose.roll);rear.setFromAxisAngle(across,s.reach*.26);
+    rock.setFromAxisAngle(ahead,s.sway*.14-pose.roll);rear.setFromAxisAngle(across,s.reach*.26);
     m.root.quaternion.copy(turn).multiply(tilt).multiply(rock);
     // Every one of those rotations turns about the contact patch, the rear one about the rear
     // pair, and the tail flip is the one thing that takes the animal off it.

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" data-motion="host">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Betta, framed to fill a screen as a desktop wallpaper."
+    />
+    <title>Betta • Deskworlds wallpaper</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "../../vendor/three.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main id="stage" aria-label="Interactive betta portrait">
+      <canvas id="scene" tabindex="-1"></canvas>
+      <div id="loading" role="status"><p>Loading world…</p></div>
+      <div id="error" role="alert" hidden></div>
+    </main>
+    <script type="module" src="../shared/start.js" data-entry="./src/main.js"></script>
+  </body>
+</html>

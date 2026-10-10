@@ -169,12 +169,14 @@ export class ReefSimulation {
     while(f.route.length>1&&f.position.distanceToSquared(f.route[0])<.30)f.route.shift();
     return f.route[0]||goal;
   }
+  // Pellets enter just inside the wide view's top edge, which meets the front of the reef
+  // about 1.2 units below the surface; dropped at the surface they took six seconds to show.
   feed(x=0,z=1) {
     if(this.time-this.lastFeed<1)return 0;
     let count=0;
     for(const pellet of this.food)if(!pellet.active&&count<8){
       pellet.active=true;pellet.age=0;pellet.size=.027+this.random()*.015;
-      pellet.position.set(clamp(x+(this.random()-.5)*1.3,-7,7),TANK.surface-.12-this.random()*.16,z+(this.random()-.5)*.9);
+      pellet.position.set(clamp(x+(this.random()-.5)*1.3,-7,7),TANK.surface-1.35-this.random()*.16,z+(this.random()-.5)*.9);
       pellet.velocity.set(0,-.04,0);count++;
     }
     if(count)this.lastFeed=this.time;return count;
@@ -548,9 +550,9 @@ export class ReefSimulation {
       // bursts close up when this animal has something worth reading.
       if((s.burst-=dt)<=0){s.sniff=1-s.sniff;s.burst=s.sniff?1.4+r()*1.6:(1.2+r()*2.8)/(1+s.signal);}
       s.flick+=(s.sniff-s.flick)*(1-Math.exp(-dt*9));
-      // The whole-body rock that goes with the antennal whip: the same two hertz, a couple
-      // of millimetres of lean, and it grows with the signal rather than quickening.
-      if(s.state!=='escape'){s.sway=Math.sin(12.566*s.rhythm)*s.signal;s.curl-=s.curl*(1-Math.exp(-dt*6));}
+      // The whole-body rock that goes with the antennal whip: a slow half-hertz lean that
+      // grows with the signal rather than quickening. At two hertz it read as a shiver.
+      if(s.state!=='escape'){s.sway=Math.sin(3.1416*s.rhythm)*s.signal;s.curl-=s.curl*(1-Math.exp(-dt*6));}
     }
   }
   diagnostics(){

@@ -1,14 +1,14 @@
 {
-  "name": "desktop-habitats",
+  "name": "deskworlds",
   "version": "1.1.0",
   "license": "MIT",
   "type": "module",
-  "description": "Living desktop scenes for macOS: Riverscape, a freshwater aquarium, and Reefscape, a saltwater tank.",
+  "description": "Living worlds for your macOS desktop: Riverbed, a planted river, Coral reef, a coral reef, Betta, a single betta, Plasma globe, a plasma globe in a dark room, Koi pond, koi in a dark garden pond seen from above, and Bonfire, a coiled sword in a bonfire at night.",
   "scripts": {
     "start": "node serve.mjs",
     "wallpaper": "sh wallpaper/install.sh",
     "unwallpaper": "sh wallpaper/uninstall.sh",
     "check": "node --check serve.mjs && for f in scenes/*/src/*.js scenes/shared/*.js ui/*.js; do node --check \"$f\" || exit 1; done",
-    "test": "node ui/tests/gallery.mjs && node scenes/riverscape/tests/fish-behavior.mjs && node scenes/riverscape/tests/render-policy.mjs && node scenes/riverscape/tests/plant-budget.mjs && node scenes/reefscape/tests/behavior.mjs && node scenes/reefscape/tests/assets.mjs && node scenes/reefscape/tests/locomotion.mjs && node scenes/reefscape/tests/anemone.mjs"
+    "test": "node ui/tests/gallery.mjs && node scenes/riverscape/tests/fish-behavior.mjs && node scenes/riverscape/tests/render-policy.mjs && node scenes/riverscape/tests/plant-budget.mjs && node scenes/riverscape/tests/environment.mjs && node scenes/reefscape/tests/behavior.mjs && node scenes/reefscape/tests/assets.mjs && node scenes/reefscape/tests/locomotion.mjs && node scenes/reefscape/tests/anemone.mjs && node scenes/bettascape/tests/food.mjs && node scenes/plasmascape/tests/plasma.mjs && node scenes/koiscape/tests/behavior.mjs && node scenes/bonfirescape/tests/fire.mjs"
   }
 }

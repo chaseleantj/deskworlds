@@ -1,0 +1,5 @@
+@import url("../../ui/scene.css");
+/* The fire burns in open darkness: the page around it is the same black. */
+:root { --background: #000; }
+/* No words on screen; the loading and error boxes stay empty until something goes wrong. */
+#loading { display: block; }

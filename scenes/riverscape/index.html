@@ -6,10 +6,10 @@
     <meta name="theme-color" content="#080e0c" />
     <meta
       name="description"
-      content="A living freshwater aquascape. A local, interactive 3D aquarium preview."
+      content="A planted freshwater river. A local, interactive 3D preview."
     />
-    <title>Riverscape • Desktop Habitats</title>
-    <link rel="icon" href="data:," />
+    <title>Riverbed • Deskworlds</title>
+    <link rel="icon" href="../../ui/icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="style.css" />
     <script type="importmap">
       {
@@ -20,16 +20,24 @@
     </script>
   </head>
   <body>
-    <main id="habitat" aria-label="Interactive freshwater aquarium">
+    <main id="stage" aria-label="Interactive planted river">
       <canvas
         id="scene"
-        aria-label="A planted freshwater aquarium. Move the pointer near fish to interact. Click to feed. Space pauses. F enters fullscreen. H hides controls."
+        aria-label="A planted freshwater river. Move the pointer near the fish to interact. Click to feed. Space pauses. F enters fullscreen. H hides controls."
         tabindex="0"
       ></canvas>
-      <nav class="chrome" aria-label="Aquariums">
-        <a class="home-link" href="../../" aria-label="Habitats home">Habitats</a>
+      <nav class="chrome" aria-label="Worlds">
+        <a class="home-link" href="../../" aria-label="Deskworlds home">Deskworlds</a>
+        <div class="scene-nav">
+          <span aria-current="page">Riverbed</span>
+          <a href="../reefscape/">Coral reef</a>
+          <a href="../bettascape/">Betta</a>
+          <a href="../plasmascape/">Plasma globe</a>
+          <a href="../koiscape/">Koi pond</a>
+          <a href="../bonfirescape/">Bonfire</a>
+        </div>
       </nav>
-      <footer class="chrome" aria-label="Aquarium controls">
+      <footer class="chrome" aria-label="World controls">
         <div class="buttons">
           <button disabled id="pause" aria-pressed="false" title="Space">Pause</button>
           <button disabled id="feed">Feed</button>
@@ -45,7 +53,7 @@
         </div>
       </footer>
       <button disabled id="show-controls" title="H">Show controls</button>
-      <div id="loading" role="status"><p>Loading aquarium…</p></div>
+      <div id="loading" role="status"><p>Loading world…</p></div>
       <div id="error" role="alert" hidden></div>
     </main>
     <script type="module" src="../shared/start.js" data-entry="./src/main.js"></script>

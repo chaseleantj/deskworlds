@@ -1,12 +1,12 @@
-// The aquarium as a desktop wallpaper.
+// A living world as a desktop wallpaper.
 //
 // One borderless window per screen sits at the desktop window level: above the still
 // wallpaper picture, below the desktop icons, so files and folders stay on top of the
-// water and keep working normally. The scene comes from a web view fed by the copy of
-// the aquarium inside this app bundle, served over a private scheme so its module
+// scene and keep working normally. The scene comes from a web view fed by the copy of
+// the scenes inside this app bundle, served over a private scheme so its module
 // imports resolve the way they do from a web server.
 //
-// The window never takes mouse events. The pointer reaches the fish another way: the
+// The window never takes mouse events. The pointer reaches the scene another way: the
 // global cursor position is read on a timer and handed to the page as a pointer move,
 // so clicking and dragging on the desktop still belongs to the Finder.
 
@@ -14,31 +14,45 @@ import Cocoa
 import WebKit
 import IOKit.ps
 
-let sceneScheme = "desktop-habitats"
+let sceneScheme = "deskworlds"
 let sceneHost = "local"
 
 /// The scenes the app can show, each a directory under scenes/ with a wallpaper.html.
-enum Habitat: String, CaseIterable {
-  case riverscape, reefscape
+enum World: String, CaseIterable {
+  case riverscape, reefscape, bettascape, plasmascape, koiscape, bonfirescape
 
-  var title: String { rawValue.prefix(1).uppercased() + rawValue.dropFirst() }
+  var title: String {
+    switch self {
+    case .riverscape: "Riverbed"
+    case .reefscape: "Coral reef"
+    case .bettascape: "Betta"
+    case .plasmascape: "Plasma globe"
+    case .koiscape: "Koi pond"
+    case .bonfirescape: "Bonfire"
+    }
+  }
+  /// Only worlds with something to eat have anything to feed; the bonfire is stirred instead.
+  var canFeed: Bool { self != .plasmascape }
+  var feedTitle: String { self == .bonfirescape ? "Stir the Fire" : "Feed" }
   var page: String { "/scenes/\(rawValue)/wallpaper.html" }
   /// What shows before the page has drawn anything, matched to each scene's own dark.
   var background: NSColor {
     switch self {
     case .riverscape: NSColor(calibratedRed: 0.031, green: 0.055, blue: 0.047, alpha: 1)
     case .reefscape: NSColor(calibratedRed: 0.043, green: 0.094, blue: 0.145, alpha: 1)
+    case .bettascape, .plasmascape, .bonfirescape: .black
+    case .koiscape: NSColor(calibratedRed: 0.016, green: 0.024, blue: 0.02, alpha: 1)
     }
   }
 
-  /// Riverscape until somebody picks otherwise. The choice outlives a restart.
-  static var selected: Habitat {
-    get { UserDefaults.standard.string(forKey: "habitat").flatMap(Habitat.init) ?? .riverscape }
-    set { UserDefaults.standard.set(newValue.rawValue, forKey: "habitat") }
+  /// Riverbed until somebody picks otherwise. The choice outlives a restart.
+  static var selected: World {
+    get { UserDefaults.standard.string(forKey: "world").flatMap(World.init) ?? .riverscape }
+    set { UserDefaults.standard.set(newValue.rawValue, forKey: "world") }
   }
 }
 
-/// Serves the bundled copy of the aquarium to the web view.
+/// Serves the bundled copy of the scenes to the web view.
 final class SceneHandler: NSObject, WKURLSchemeHandler {
   private let root: URL
   private let page: String
@@ -82,7 +96,7 @@ final class Reporter: NSObject, WKScriptMessageHandler {
   func userContentController(
     _ controller: WKUserContentController, didReceive message: WKScriptMessage
   ) {
-    NSLog("desktop-habitats page: \(message.body)")
+    NSLog("deskworlds page: \(message.body)")
   }
 }
 
@@ -94,8 +108,8 @@ final class DesktopWindow: NSWindow {
   override var canBecomeMain: Bool { false }
 }
 
-/// One screen's worth of aquarium.
-final class Wallpaper: NSObject, WKNavigationDelegate {
+/// One screen's worth of world.
+final class Wallpaper: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
   let window: DesktopWindow
   let view: WKWebView
   private var loaded = false
@@ -103,10 +117,10 @@ final class Wallpaper: NSObject, WKNavigationDelegate {
   private var rate = 0
   private var battery = false
 
-  init(screen: NSScreen, root: URL, habitat: Habitat) {
+  init(screen: NSScreen, root: URL, world: World) {
     let settings = WKWebViewConfiguration()
     settings.setURLSchemeHandler(
-      SceneHandler(root: root, page: habitat.page), forURLScheme: sceneScheme)
+      SceneHandler(root: root, page: world.page), forURLScheme: sceneScheme)
     settings.suppressesIncrementalRendering = true
     // The page holds no state worth keeping between runs and should never leave traces.
     settings.websiteDataStore = .nonPersistent()
@@ -131,15 +145,15 @@ final class Wallpaper: NSObject, WKNavigationDelegate {
     settings.userContentController.addUserScript(
       WKUserScript(
         source: """
-          window.habitatPointerCount = 0;
-          window.habitatPointer = (x, y) => {
+          window.scenePointerCount = 0;
+          window.scenePointer = (x, y) => {
             const canvas = document.querySelector('#scene');
-            window.habitatPointerCount++;
+            window.scenePointerCount++;
             if (canvas)
               canvas.dispatchEvent(
                 new PointerEvent('pointermove', { clientX: x, clientY: y, bubbles: true }));
           };
-          window.habitatPointerOut = () => {
+          window.scenePointerOut = () => {
             const canvas = document.querySelector('#scene');
             if (canvas) canvas.dispatchEvent(new PointerEvent('pointerleave'));
           };
@@ -156,7 +170,7 @@ final class Wallpaper: NSObject, WKNavigationDelegate {
     {
       view.setValue(false, forKey: "windowOcclusionDetectionEnabled")
     }
-    view.underPageBackgroundColor = habitat.background
+    view.underPageBackgroundColor = world.background
     view.autoresizingMask = [.width, .height]
 
     window = DesktopWindow(
@@ -165,22 +179,23 @@ final class Wallpaper: NSObject, WKNavigationDelegate {
     super.init()
 
     view.navigationDelegate = self
-    // Finder's desktop window is above `.desktopWindow` on recent macOS versions.
-    // Use the desktop-icon level so the live scene stays above the still wallpaper.
-    window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)))
+    settings.userContentController.add(self, name: "ready")
+    window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)))
     window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
     window.ignoresMouseEvents = true
     window.isOpaque = true
     window.hasShadow = false
-    window.backgroundColor = habitat.background
+    window.backgroundColor = world.background
     window.isReleasedWhenClosed = false
     window.contentView = view
-    // Hiding the agent, or another app's "Hide Others", must not take the water away.
+    // Hiding the agent, or another app's "Hide Others", must not take the world away.
     window.canHide = false
     window.setFrame(screen.frame, display: true)
     window.orderFrontRegardless()
 
-    view.load(URLRequest(url: URL(string: "\(sceneScheme)://\(sceneHost)\(habitat.page)")!))
+    // Native: full display resolution plugged in, the Balanced profile on battery.
+    let page = "\(sceneScheme)://\(sceneHost)\(world.page)?quality=native"
+    view.load(URLRequest(url: URL(string: page)!))
   }
 
   func close() {
@@ -188,23 +203,24 @@ final class Wallpaper: NSObject, WKNavigationDelegate {
     view.navigationDelegate = nil
     view.configuration.userContentController.removeAllUserScripts()
     view.configuration.userContentController.removeScriptMessageHandler(forName: "report")
+    view.configuration.userContentController.removeScriptMessageHandler(forName: "ready")
     view.removeFromSuperview()
     window.contentView = nil
     window.orderOut(nil)
     window.close()
   }
 
-  /// Send only state changes. didFinish resends once after navigation, so there is no
+  /// Send only state changes. The page's ready message resends once, so there is no
   /// need to cross the WebKit process boundary every second with an unchanged rate.
   @discardableResult
   func setRate(_ wanted: Int) -> Bool {
     guard wanted != rate else { return false }
     rate = wanted
     if rate == 0 && inside {
-      if loaded { view.evaluateJavaScript("habitatPointerOut()") }
+      if loaded { view.evaluateJavaScript("scenePointerOut()") }
       inside = false
     }
-    NSLog("desktop-habitats: \(rate) fps")
+    NSLog("deskworlds: \(rate) fps")
     send()
     return true
   }
@@ -219,34 +235,38 @@ final class Wallpaper: NSObject, WKNavigationDelegate {
     guard loaded else { return }
     view.evaluateJavaScript(
       """
-      typeof habitatPower === 'function' && habitatPower(\(battery ? "true" : "false"));
-      typeof habitatRate === 'function' && habitatRate(\(rate));
+      typeof scenePower === 'function' && scenePower(\(battery ? "true" : "false"));
+      typeof sceneRate === 'function' && sceneRate(\(rate));
       """)
   }
 
-  /// A pinch of food on the water, asked for from the menu rather than by clicking. The
+  /// A pinch of food, asked for from the menu rather than by clicking. The
   /// window never takes a mouse event, so there is no cursor position to drop it at: the
   /// page picks its own spot on the surface. Nothing is sent while the scene is stopped,
   /// where the food would only pile up unseen until it started again.
   func feed() {
     guard loaded, rate > 0 else { return }
-    view.evaluateJavaScript("typeof habitatFeed === 'function' && habitatFeed()")
+    view.evaluateJavaScript("typeof sceneFeed === 'function' && sceneFeed()")
   }
 
   /// A cursor position in this screen's coordinates, or nil when the cursor left it.
   func setPointer(_ point: NSPoint?) {
     guard loaded, rate > 0 else { return }
     guard let point else {
-      if inside { view.evaluateJavaScript("habitatPointerOut()") }
+      if inside { view.evaluateJavaScript("scenePointerOut()") }
       inside = false
       return
     }
     inside = true
     view.evaluateJavaScript(
-      "habitatPointer(\(String(format: "%.1f", point.x)),\(String(format: "%.1f", point.y)))")
+      "scenePointer(\(String(format: "%.1f", point.x)),\(String(format: "%.1f", point.y)))")
   }
 
-  func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+  /// The scene has installed its callbacks. WebKit's own didFinish can come before that,
+  /// and a rate sent then would be lost until the next change.
+  func userContentController(
+    _ controller: WKUserContentController, didReceive message: WKScriptMessage
+  ) {
     loaded = true
     send()
   }
@@ -255,7 +275,7 @@ final class Wallpaper: NSObject, WKNavigationDelegate {
     _ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!,
     withError error: Error
   ) {
-    NSLog("desktop-habitats: the scene did not load: \(error.localizedDescription)")
+    NSLog("deskworlds: the scene did not load: \(error.localizedDescription)")
   }
 
   /// What the page thinks it is doing, for the log.
@@ -271,12 +291,12 @@ final class Wallpaper: NSObject, WKNavigationDelegate {
           webgl2: Boolean(context),
           gpu: context && context.getParameter(context.RENDERER),
           hidden: document.hidden,
-          pointers: window.habitatPointerCount,
+          pointers: window.scenePointerCount,
         });
       })()
       """
     ) { value, error in
-      NSLog("desktop-habitats page state: \(value ?? error?.localizedDescription ?? "unreadable")")
+      NSLog("deskworlds page state: \(value ?? error?.localizedDescription ?? "unreadable")")
     }
   }
 
@@ -289,7 +309,7 @@ final class Wallpaper: NSObject, WKNavigationDelegate {
         let png = NSBitmapImageRep(data: data)?.representation(using: .png, properties: [:])
       else { return }
       try? png.write(to: file)
-      NSLog("desktop-habitats: wrote \(file.path)")
+      NSLog("deskworlds: wrote \(file.path)")
     }
   }
 }
@@ -306,13 +326,13 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
   private let state = NSMenuItem()
   private let pause = NSMenuItem()
   private let feed = NSMenuItem()
-  private var habitatItems: [NSMenuItem] = []
-  private var habitat = Habitat.selected
+  private var worldItems: [NSMenuItem] = []
+  private var world = World.selected
   private var applied = 0
   private var pointerTimer: Timer?
   private var pointerRate = 0
   private var exposureTimer: Timer?
-  /// The choice outlives a restart, so a paused tank is still paused after logging in.
+  /// The choice outlives a restart, so a paused world is still paused after logging in.
   /// Until one has been made there is nothing under the key at all, which is what lets a
   /// machine that asks for less motion start still without overruling anybody who has
   /// since decided otherwise.
@@ -364,8 +384,8 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
       forName: .NSProcessInfoPowerStateDidChange, object: nil, queue: .main
     ) { [weak self] _ in self?.applyRate() }
 
-    // Turning Reduce Motion on mid-session stops the water for the same reason it starts
-    // stopped under it, unless the tank has already been asked for deliberately.
+    // Turning Reduce Motion on mid-session stops the scene for the same reason it starts
+    // stopped under it, unless it has already been asked for deliberately.
     workspace.addObserver(
       forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil,
       queue: .main
@@ -382,7 +402,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
       CFRunLoopAddSource(CFRunLoopGetMain(), source, .defaultMode)
     }
 
-    // `kill -USR1` writes what the first screen is showing to /tmp/desktop-habitats.png.
+    // `kill -USR1` writes what the first screen is showing to /tmp/deskworlds.png.
     signal(SIGUSR1, SIG_IGN)
     snapshots = DispatchSource.makeSignalSource(signal: SIGUSR1, queue: .main)
     snapshots?.setEventHandler { [weak self] in self?.snapshot() }
@@ -395,7 +415,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
     for screen in screens { screen.setRate(60) }
     DispatchQueue.main.asyncAfter(deadline: .now() + 4) { [weak self] in
       first.probe()
-      first.snapshot(to: URL(fileURLWithPath: "/tmp/desktop-habitats.png")) {
+      first.snapshot(to: URL(fileURLWithPath: "/tmp/deskworlds.png")) {
         self?.applyRate()
       }
     }
@@ -411,7 +431,7 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
   private func build() {
     layout = NSScreen.screens.map(\.frame)
     for screen in screens { screen.close() }
-    screens = NSScreen.screens.map { Wallpaper(screen: $0, root: root, habitat: habitat) }
+    screens = NSScreen.screens.map { Wallpaper(screen: $0, root: root, world: world) }
     applyRate()
   }
 
@@ -513,14 +533,17 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
   // MARK: - The menu bar
 
-  /// The agent's only visible piece: a fish in the menu bar that can stop the water.
+  /// The agent's only visible piece: an icon in the menu bar that can stop the scene.
   private func addMenu() {
     let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-    let symbol = NSImage(systemSymbolName: "fish", accessibilityDescription: "Desktop Habitats")
+    // The logo's slab of layered ground, drawn black so AppKit can tint it for the menu bar.
+    let symbol = Bundle.main.url(forResource: "menubar", withExtension: "svg").flatMap(NSImage.init)
+    symbol?.size = NSSize(width: 18, height: 18)
     symbol?.isTemplate = true
+    symbol?.accessibilityDescription = "Deskworlds"
     item.button?.image = symbol
-    if symbol == nil { item.button?.title = "Desktop Habitats" }
-    item.button?.toolTip = "Desktop Habitats · \(habitat.title)"
+    if symbol == nil { item.button?.title = "Deskworlds" }
+    item.button?.toolTip = "Deskworlds · \(world.title)"
 
     let menu = NSMenu()
     menu.delegate = self
@@ -530,22 +553,22 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
     state.isEnabled = false
     menu.addItem(state)
     menu.addItem(.separator())
-    let environments = NSMenu(title: "Environment")
-    environments.autoenablesItems = false
-    for choice in Habitat.allCases {
-      let item = NSMenuItem(title: choice.title, action: #selector(selectHabitat), keyEquivalent: "")
+    let worlds = NSMenu(title: "World")
+    worlds.autoenablesItems = false
+    for choice in World.allCases {
+      let item = NSMenuItem(title: choice.title, action: #selector(selectWorld), keyEquivalent: "")
       item.target = self
       item.representedObject = choice.rawValue
-      environments.addItem(item)
-      habitatItems.append(item)
+      worlds.addItem(item)
+      worldItems.append(item)
     }
-    let environment = NSMenuItem(title: "Environment", action: nil, keyEquivalent: "")
-    environment.submenu = environments
-    menu.addItem(environment)
+    let worldMenu = NSMenuItem(title: "World", action: nil, keyEquivalent: "")
+    worldMenu.submenu = worlds
+    menu.addItem(worldMenu)
     menu.addItem(.separator())
     feed.title = "Feed"
     feed.target = self
-    feed.action = #selector(feedFish)
+    feed.action = #selector(feedEveryScreen)
     menu.addItem(feed)
     pause.target = self
     pause.action = #selector(togglePause)
@@ -557,15 +580,15 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
     item.menu = menu
     status = item
     if item.button?.window == nil || !item.isVisible {
-      NSLog("desktop-habitats: the menu bar item did not appear")
+      NSLog("deskworlds: the menu bar item did not appear")
     }
   }
 
   /// Says what the wallpaper is doing, and why, whenever the menu is opened. Most of the
   /// reasons it holds still are deliberate, and unexplained stillness reads as a fault.
   func menuNeedsUpdate(_ menu: NSMenu) {
-    for item in habitatItems {
-      item.state = item.representedObject as? String == habitat.rawValue ? .on : .off
+    for item in worldItems {
+      item.state = item.representedObject as? String == world.rawValue ? .on : .off
     }
     state.title =
       lowPower
@@ -582,27 +605,28 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // Reduce Motion is not the same case: the machine can perfectly well draw, it has
     // merely been asked not to, and Resume is how somebody says they want this one anyway.
     pause.isEnabled = !lowPower
-    // Food that nothing is going to draw would sit in still water until the tank started
+    // Food that nothing is going to draw would sit unseen until the scene started
     // again and then all arrive at once, so Feed says so rather than promising a feeding.
-    feed.isEnabled = applied > 0
+    feed.isEnabled = applied > 0 && world.canFeed
+    feed.title = world.feedTitle
   }
 
-  /// Every screen, because each one runs its own tank with its own fish rather than one
+  /// Every screen, because each one runs its own world rather than one
   /// scene stretched across them: feeding only the screen the menu bar happens to be on
-  /// would leave the others watching an unfed aquarium.
-  @objc private func feedFish() {
+  /// would leave the others unfed.
+  @objc private func feedEveryScreen() {
     for screen in screens { screen.feed() }
   }
 
-  /// Every screen changes together: the scenes are separate tanks, not one habitat with
+  /// Every screen changes together: the scenes are separate worlds, not one world with
   /// two windows, and mixing them would make the menu's checkmark a half-truth.
-  @objc private func selectHabitat(_ sender: NSMenuItem) {
-    guard let name = sender.representedObject as? String, let chosen = Habitat(rawValue: name),
-      chosen != habitat
+  @objc private func selectWorld(_ sender: NSMenuItem) {
+    guard let name = sender.representedObject as? String, let chosen = World(rawValue: name),
+      chosen != world
     else { return }
-    habitat = chosen
-    Habitat.selected = chosen
-    status?.button?.toolTip = "Desktop Habitats · \(chosen.title)"
+    world = chosen
+    World.selected = chosen
+    status?.button?.toolTip = "Deskworlds · \(chosen.title)"
     build()
   }
 

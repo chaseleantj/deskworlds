@@ -6,10 +6,10 @@
     <meta name="theme-color" content="#0b1825" />
     <meta
       name="description"
-      content="A saltwater aquarium with three clownfish, a host anemone, small shoals and cleaner shrimp. A local, interactive 3D aquarium preview."
+      content="A coral reef with three clownfish, a host anemone, small shoals and cleaner shrimp. A local, interactive 3D preview."
     />
-    <title>Reefscape • Desktop Habitats</title>
-    <link rel="icon" href="data:," />
+    <title>Coral reef • Deskworlds</title>
+    <link rel="icon" href="../../ui/icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="style.css" />
     <script type="importmap">
       {
@@ -20,20 +20,24 @@
     </script>
   </head>
   <body>
-    <main id="habitat" aria-label="Interactive saltwater aquarium">
+    <main id="stage" aria-label="Interactive coral reef">
       <canvas
         id="scene"
         tabindex="0"
-        aria-label="A saltwater tank with three clownfish, an anemone, small reef fish and cleaner shrimp. Click to feed. Space pauses. F enters fullscreen. H hides controls."
+        aria-label="A coral reef with three clownfish, an anemone, small reef fish and cleaner shrimp. Click to feed. Space pauses. F enters fullscreen. H hides controls."
       ></canvas>
-      <nav class="chrome" aria-label="Aquariums">
-        <a class="home-link" href="../../" aria-label="Habitats home">Habitats</a>
+      <nav class="chrome" aria-label="Worlds">
+        <a class="home-link" href="../../" aria-label="Deskworlds home">Deskworlds</a>
         <div class="scene-nav">
-          <a href="../riverscape/">Riverscape</a>
-          <span aria-current="page">Reefscape</span>
+          <a href="../riverscape/">Riverbed</a>
+          <span aria-current="page">Coral reef</span>
+          <a href="../bettascape/">Betta</a>
+          <a href="../plasmascape/">Plasma globe</a>
+          <a href="../koiscape/">Koi pond</a>
+          <a href="../bonfirescape/">Bonfire</a>
         </div>
       </nav>
-      <footer class="chrome" aria-label="Aquarium controls">
+      <footer class="chrome" aria-label="World controls">
         <div class="buttons">
           <button disabled id="pause" aria-pressed="false" title="Space">Pause</button>
           <button disabled id="feed">Feed</button>
@@ -49,7 +53,7 @@
         </div>
       </footer>
       <button disabled id="show-controls" title="H">Show controls</button>
-      <div id="loading" role="status"><p>Loading aquarium…</p></div>
+      <div id="loading" role="status"><p>Loading world…</p></div>
       <div id="error" role="alert" hidden></div>
     </main>
     <script type="module" src="../shared/start.js" data-entry="./src/main.js"></script>

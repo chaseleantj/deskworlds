@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d2e27"/><stop offset="1" stop-color="#08100d"/></linearGradient>
+    <linearGradient id="land" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="#e3edc2"/><stop offset="1" stop-color="#8fb087"/></linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="10.7" fill="url(#ground)"/>
+  <rect x=".25" y=".25" width="47.5" height="47.5" rx="10.5" fill="none" stroke="#fff" stroke-opacity=".08" stroke-width=".5"/>
+  <g transform="translate(24 24) scale(.62) translate(-24 -24)" fill="none" stroke="#eeeede" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M24 5 43 15.5 24 26 5 15.5Z" fill="url(#land)" stroke-width="3"/>
+    <path d="M24 5 43 15.5V31.5L24 42 5 31.5V15.5ZM24 26V42" stroke-width="3"/>
+    <path d="M5 21C6.55 22.2 8.17 23.52 9.75 24.12C11.33 24.72 12.93 24.64 14.5 25.16C16.07 25.68 17.65 26.96 19.25 28.38C20.85 29.8 22.38 30.9 24 31.5C25.62 30.83 27.15 29.57 28.75 28.2C30.35 26.83 31.9 25.75 33.5 25.37C35.1 24.99 36.65 25.02 38.25 24.3C39.85 23.58 41.38 22.1 43 21M5 26.3C6.55 27.52 8.17 28.21 9.75 28.54C11.33 28.87 12.93 29.22 14.5 30.37C16.07 31.52 17.65 33.36 19.25 34.56C20.85 35.76 22.38 36.27 24 36.8C25.62 35.87 27.15 34.27 28.75 33.29C30.35 32.31 31.9 32.1 33.5 31.88C35.1 31.66 36.65 31.04 38.25 29.81C39.85 28.58 41.38 27.07 43 26.3" stroke-width="1.8"/>
+  </g>
+</svg>

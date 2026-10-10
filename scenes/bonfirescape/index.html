@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="A bonfire burning in the dark, a coiled sword driven into its ashes. Click to stir the embers." />
+    <title>Bonfire • Deskworlds</title>
+    <link rel="icon" href="../../ui/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "../../vendor/three.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main id="stage" aria-label="Interactive bonfire">
+      <canvas id="scene" tabindex="0" aria-label="A bonfire burning in the dark with a coiled sword driven into its ashes. Click to stir the embers and send up sparks. Move the cursor to stir the air. Space pauses. F enters fullscreen."></canvas>
+      <div id="loading" role="status" aria-label="Loading"></div>
+      <div id="error" role="alert" hidden></div>
+    </main>
+    <script type="module" src="../shared/start.js" data-entry="./src/main.js"></script>
+  </body>
+</html>

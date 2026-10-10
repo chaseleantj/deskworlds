@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#050a08" />
+    <meta
+      name="description"
+      content="Koi in a dark garden pond, seen from above through the moving surface. A local, interactive 3D preview."
+    />
+    <title>Koi pond • Deskworlds</title>
+    <link rel="icon" href="../../ui/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "../../vendor/three.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main id="stage" aria-label="Interactive koi pond">
+      <canvas
+        id="scene"
+        tabindex="0"
+        aria-label="Koi gliding under lily pads in a dark pond, seen from above. Click to feed. Move the cursor slowly and the fish come to it. Space pauses. F enters fullscreen. H hides controls."
+      ></canvas>
+      <nav class="chrome" aria-label="Worlds">
+        <a class="home-link" href="../../" aria-label="Deskworlds home">Deskworlds</a>
+        <div class="scene-nav">
+          <a href="../riverscape/">Riverbed</a>
+          <a href="../reefscape/">Coral reef</a>
+          <a href="../bettascape/">Betta</a>
+          <a href="../plasmascape/">Plasma globe</a>
+          <span aria-current="page">Koi pond</span>
+          <a href="../bonfirescape/">Bonfire</a>
+        </div>
+      </nav>
+      <footer class="chrome" aria-label="World controls">
+        <div class="buttons">
+          <button disabled id="pause" aria-pressed="false" title="Space">Pause</button>
+          <button disabled id="feed">Feed</button>
+          <button disabled id="fullscreen" title="F">Fullscreen</button>
+        </div>
+        <div class="preferences">
+          <select disabled id="quality" aria-label="Quality">
+            <option value="eco">Eco</option>
+            <option value="balanced" selected>Balanced</option>
+            <option value="detail">Detail</option>
+          </select>
+          <button disabled id="hide" title="H">Hide controls</button>
+        </div>
+      </footer>
+      <button disabled id="show-controls" title="H">Show controls</button>
+      <div id="loading" role="status"><p>Loading world…</p></div>
+      <div id="error" role="alert" hidden></div>
+    </main>
+    <script type="module" src="../shared/start.js" data-entry="./src/main.js"></script>
+  </body>
+</html>

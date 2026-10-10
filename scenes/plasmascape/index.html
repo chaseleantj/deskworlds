@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="A plasma globe glowing in a dark room. Bring your cursor close and the plasma reaches for your finger." />
+    <title>Plasma globe • Deskworlds</title>
+    <link rel="icon" href="../../ui/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "../../vendor/three.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <main id="stage" aria-label="Interactive plasma globe">
+      <canvas id="scene" tabindex="0" aria-label="A plasma globe glowing in the dark. Move the cursor close to the glass and the plasma reaches for it. Space pauses. F enters fullscreen."></canvas>
+      <div id="loading" role="status" aria-label="Loading"></div>
+      <div id="error" role="alert" hidden></div>
+    </main>
+    <script type="module" src="../shared/start.js" data-entry="./src/main.js"></script>
+  </body>
+</html>

@@ -10,10 +10,13 @@ export const SURFACE=TANK.surface;
 // a shadow and the caustic line at its foot lean the same way, which is what stops the
 // light reading as two unrelated patterns pasted onto one scene.
 export const LAMP=(()=>{const l=Math.hypot(-2.2,13,2.0);return {x:-2.2/l,y:13/l,z:2.0/l};})();
+// How far up that direction the lamp bank hangs: the key light's position, and the point
+// the shafts in the water fan out from.
+export const LAMP_RANGE=14.2;
 // Surface ripples, at the actual aquarium depth (10 cm/unit), not ocean swell.
 // omega² = g k tanh(kh). Pump circulation below is a separate forced flow.
 const g=98.1,h=SURFACE;
-// The two short components carry no visible surface — the surface is above the frame —
+// The two short components barely move the surface anyone sees at the top of frame,
 // but they are what breaks the glitter on the bed into hand-sized cells instead of
 // metre-wide washes, so they belong in the same dispersion-correct set.
 export const WAVES=[
@@ -95,6 +98,46 @@ export const extinctionGLSL=`
 float reefAirPath(vec3 eye,vec3 ray){return eye.z>${n(TANK.front)}?(eye.z-${n(TANK.front)})/max(-ray.z,.05):0.;}
 float reefWaterPath(vec3 p,vec3 eye){vec3 ray=p-eye;float d=length(ray);return max(0.,d-reefAirPath(eye,ray/max(d,1e-5)));}
 vec3 reefTransmittance(float path){return exp(-vec3(${ABSORB.map(n).join(',')})*path);}`;
+// What the water column itself sends toward the eye per unit of path: a skylight that is
+// brightest just under the surface and dies away with depth, cyan above and indigo below,
+// and the shafts. A shaft is the lamp's light gathered by the long, slow surface swell and
+// scattered by the water it crosses. Its pattern is read where the ray from the lamp
+// through p left the surface; refraction bends those rays toward the vertical, which is
+// the same as the lamp hanging n times higher, so they fan out gently from above the
+// tank and lean the way the key light does. The pattern is mostly across x, so it changes
+// slowly along a view ray and a short march resolves it.
+const IOR=1.333,lamp=[LAMP.x*LAMP_RANGE,h+(LAMP.y*LAMP_RANGE-h)*IOR,LAMP.z*LAMP_RANGE];
+export const inscatterGLSL=`
+float reefShafts(vec3 p,float t){
+  vec2 q=vec2(${n(lamp[0])},${n(lamp[2])});q+=(p.xz-q)*${n(lamp[1]-h)}/max(${n(lamp[1])}-p.y,1.);
+  float a=pow(.5+.5*sin(q.x*1.3+.8*sin(q.y*.5+t*.05)+t*.031),10.)
+    +.8*pow(.5+.5*sin(q.x*2.3-q.y*.4-t*.047+1.3),12.)
+    +.6*pow(.5+.5*sin(q.x*3.7+q.y*.3+t*.023+.4),14.)
+    +.5*pow(.5+.5*sin(q.x*.55-t*.013+2.),6.);
+  return a*exp(-q.x*q.x/90.);
+}
+vec3 reefInscatter(vec3 p,float t,float lit){
+  float depth=clamp(${n(h)}-p.y,0.,12.),sky=exp(-.48*depth);
+  return mix(vec3(.00012,.0007,.0030),vec3(.0009,.0034,.0082),sky)+vec3(.0030,.0070,.0110)*reefShafts(p,t)*lit*sky;
+}`;
+// The underside of the surface, seen from below at a grazing angle. Beyond the critical
+// angle it is a mirror for the water under it; where the pump chop tilts a facet far
+// enough toward the eye it opens onto the lit air above and flashes cyan-white. The swell
+// is the dispersion-correct set above; the chop is finer and only ever seen, never cast,
+// so it lives here. It thins with distance, as a surface does once its facets fall below
+// what a pixel resolves, so it never sparkles into aliasing.
+const CHOP=[[9.,.3,.9,.26],[13.,-1.1,1.4,.2],[19.,.8,2.1,.14],[27.,2.,2.9,.09]].map(([k,angle,speed,slope])=>({k,dx:Math.cos(angle),dz:Math.sin(angle),speed,slope}));
+export const surfaceGLSL=`
+vec3 reefSurfaceUnderside(vec3 s,vec3 dir,float distance,float t){
+  vec2 q=s.xz;float st=t*${n(RIPPLE_TIME)};vec2 slope=vec2(0.);
+  ${WAVES.map(w=>`slope+=${n(w.a*w.k*10)}*vec2(${n(w.dx)},${n(w.dz)})*cos(${n(w.k)}*dot(q,vec2(${n(w.dx)},${n(w.dz)}))-${n(w.omega)}*st+${n(w.phase)});`).join('\n')}
+  float fine=exp(-distance*.09);
+  ${CHOP.map((c,i)=>`slope+=fine*${n(c.slope)}*vec2(${n(c.dx)},${n(c.dz)})*cos(${n(c.k)}*dot(q,vec2(${n(c.dx)},${n(c.dz)}))+${n(c.speed)}*t*.1+${i*1.7+.4}*sin(q.y*.9+q.x*.4));`).join('\n')}
+  vec3 facet=normalize(vec3(-slope.x,1.,-slope.y));
+  float window=smoothstep(.30,.70,dot(dir,facet));
+  vec3 mirror=vec3(.035,.13,.26)*(.75+.5*dot(slope,vec2(.6,.8)));
+  return mix(mirror,vec3(.30,.62,.80),window);
+}`;
 // The key light's own shadow map, read by whatever lights the water itself: a mote in
 // the arch's shadow stays dark because the lamp never reached it. The map is three's
 // RGBA-packed depth, so <packing> must precede this.

@@ -25,15 +25,22 @@ let pointer;
 let suppressClick = false;
 let clickDuringMotion = false;
 
+// Portals sit on a ring of three or more, one slot apart; the selected slot faces the viewer.
+// Neighbours rest at depth 1, receding to either side. A portal changing ends passes
+// the back of the ring (depth above 1), hidden behind the front portal.
+const slot = 2 * Math.PI / portals.length;
+function layout(offset) {
+  const angle = offset * slot;
+  const depth = (1 - Math.cos(angle)) / (1 - Math.cos(slot));
+  const side = Math.sin(angle) / Math.sin(slot);
+  return { x: 48 * side, y: -4 * Math.min(depth, 1), z: -520 * depth, turn: -18 * side, depth };
+}
 function render() {
   for (const [index, portal] of portals.entries()) {
-    const angle = (index - position) * Math.PI;
-    const depth = (1 - Math.cos(angle)) / 2;
-    // Opposite arcs keep the two opaque images apart as they exchange depth.
-    const x = 48 * depth + 50 * Math.sin(angle);
-    portal.style.transform = `translate3d(${x}%, ${-4 * depth}%, ${-520 * depth}px) rotateY(${-18 * depth}deg)`;
-    portal.style.zIndex = Math.round(1000 * (1 - depth));
-    portal.style.setProperty('--brightness', 1 - 0.55 * depth);
+    const { x, y, z, turn, depth } = layout(index - position);
+    portal.style.transform = `translate3d(${x}%, ${y}%, ${z}px) rotateY(${turn}deg)`;
+    portal.style.zIndex = Math.round(1000 / (1 + depth));
+    portal.style.setProperty('--brightness', 1 - 0.55 * Math.min(depth, 1));
     portal.querySelector('.portal-caption').style.visibility = depth < 0.65 ? 'visible' : 'hidden';
   }
 }
@@ -131,8 +138,10 @@ function snap(target) {
   moveTo(target);
 }
 function select(index) {
+  // Take the shorter way round the ring.
   const front = nearest(position);
-  snap(wrap(front) === index ? front : front + 1);
+  const ahead = wrap(index - front);
+  snap(front + (ahead > portals.length / 2 ? ahead - portals.length : ahead));
 }
 
 document.addEventListener('keydown', event => {

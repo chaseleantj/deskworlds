@@ -1,0 +1,6 @@
+@import url("../../ui/scene.css");
+/* The betta is lit against pure black, and the page around it is the same black. */
+:root { --background: #000; }
+/* Drag orbits and pinch zooms, so the canvas takes every touch gesture itself. */
+html:not([data-motion="host"]) #scene { touch-action: none; cursor: grab; }
+html:not([data-motion="host"]) #scene.dragging { cursor: grabbing; }

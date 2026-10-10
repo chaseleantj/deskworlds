@@ -29,10 +29,10 @@ const KNOTS=[0,.05,.12,.20,.30,.42,.55,.68,.80,.90,1];
 const SPECIES={
   clown:{
     len:.98,
-    back:[.016,.098,.170,.214,.238,.242,.224,.186,.134,.082,.045],
-    belly:[.018,.100,.174,.222,.248,.248,.222,.172,.114,.066,.038],
-    half:[.008,.044,.068,.080,.086,.084,.075,.058,.039,.024,.014],
-    eye:{u:.130,v:.34,r:.044},scales:[34,13],cheek:.22,veil:[.97,.82],
+    back:[.046,.142,.206,.234,.246,.246,.226,.188,.134,.082,.045],
+    belly:[.036,.124,.194,.232,.248,.246,.222,.172,.114,.066,.038],
+    half:[.018,.054,.074,.083,.087,.084,.075,.058,.039,.024,.014],
+    eye:{u:.130,v:.34,r:.044},scales:[34,13],cheek:.22,veil:[.98,.86],
     // Nine or ten dorsal spines, and percula's spinous dorsal is the low one — 3.0–3.4 in
     // head length, against a taller anterior fin in ocellaris, which is how the two are
     // separated on a photograph. The soft lobe behind the notch is the fin's high point.
@@ -69,10 +69,10 @@ const SPECIES={
   },
   anthias:{
     len:1.14,
-    back:[.011,.060,.126,.180,.208,.212,.194,.160,.114,.070,.037],
-    belly:[.012,.064,.128,.182,.210,.210,.186,.144,.096,.056,.031],
+    back:[.018,.078,.136,.182,.206,.210,.194,.160,.114,.070,.037],
+    belly:[.016,.070,.126,.172,.198,.200,.180,.140,.094,.056,.031],
     half:[.006,.033,.052,.062,.066,.064,.056,.043,.029,.018,.010],
-    eye:{u:.118,v:.34,r:.046},scales:[40,15],cheek:.10,veil:[.99,.80],
+    eye:{u:.118,v:.34,r:.046},scales:[40,15],cheek:.10,veil:[.94,.62],
     // Ten spines and fifteen to seventeen soft rays make a long, low, even-topped dorsal;
     // the third spine is drawn out in both sexes and greatly so in the terminal male.
     dorsal:{from:.175,to:.865,sink:.012,reach:[.044,.072,.078,.074,.072,.082,.092,.068,.024]},
@@ -87,10 +87,19 @@ const SPECIES={
   },
 };
 const axis=(kind,u)=>SNOUT-u*SPECIES[kind].len;
+// A cubic Hermite through the knots with central-difference tangents, so the profile has
+// no flat spot at each knot (a smoothstep per segment scallops the outline), and a steep
+// start at the snout so the head rounds off instead of ending in a pout.
+function slope(values,k) {
+  const last=KNOTS.length-1;
+  if(k===0)return 3*(values[1]-values[0])/KNOTS[1];
+  if(k===last)return (values[last]-values[last-1])/(KNOTS[last]-KNOTS[last-1]);
+  return (values[k+1]-values[k-1])/(KNOTS[k+1]-KNOTS[k-1]);
+}
 function along(values,u) {
   let i=1;while(i<KNOTS.length-1&&KNOTS[i]<u)i++;
-  const t=(u-KNOTS[i-1])/(KNOTS[i]-KNOTS[i-1]),s=t*t*(3-2*t);
-  return values[i-1]+(values[i]-values[i-1])*s;
+  const h=KNOTS[i]-KNOTS[i-1],t=(u-KNOTS[i-1])/h,t2=t*t,t3=t2*t;
+  return (2*t3-3*t2+1)*values[i-1]+(t3-2*t2+t)*h*slope(values,i-1)+(3*t2-2*t3)*values[i]+(t3-t2)*h*slope(values,i);
 }
 function section(kind,u) {
   const s=SPECIES[kind];u=Math.max(0,Math.min(1,u));
@@ -112,7 +121,7 @@ function sectionPoint(kind,u,a,out=V()) {
 const skinPoint=(kind,u,v,side)=>{const q=sectionPoint(kind,u,Math.acos(v));return [q.x,q.y,side*Math.abs(q.z)];};
 
 function bodyGeometry(kind) {
-  const rings=40,sides=22,p=[],uv=[],index=[],q=V(),previous=V();
+  const rings=56,sides=34,p=[],uv=[],index=[],q=V(),previous=V();
   for(let j=0;j<=rings;j++) {
     // Rows crowd toward the snout, where the profile and the orbit turn hardest.
     const u=Math.pow(j/rings,1.24),arc=[0];
@@ -177,11 +186,11 @@ const hypural=kind=>{
 // paints the pupil, the thin iris ring and the sharp dark rim by radius.
 function eyeSeat(kind) {
   const e=SPECIES[kind].eye,q=sectionPoint(kind,e.u,Math.acos(e.v));
-  return {x:q.x,y:q.y,z:Math.abs(q.z)*.80,r:e.r};
+  return {x:q.x,y:q.y,z:Math.abs(q.z)*.84,r:e.r};
 }
 function eye(kind,side) {
-  const e=eyeSeat(kind),g=new THREE.SphereGeometry(1,10,6);
-  g.scale(e.r,e.r*1.05,e.r*.44);g.translate(e.x,e.y,side*e.z);
+  const e=eyeSeat(kind),g=new THREE.SphereGeometry(1,16,10);
+  g.scale(e.r,e.r*1.05,e.r*.32);g.translate(e.x,e.y,side*e.z);
   return part(g,4);
 }
 
@@ -216,7 +225,7 @@ const SKIN={
     float d=min(min(b1,b2),abs(u-.872)-.030);
     // percula carries thick black borders where ocellaris has a hairline or none at all,
     // and the black broadens with age: the big female in a group is the blackest fish.
-    float edge=.020+.018*vTrim.x,aa=max(fwidth(d),.0012);
+    float edge=.013+.013*vTrim.x,aa=max(fwidth(d),.0012);
     skin=mix(skin,vec3(.009,.012,.016),1.-smoothstep(edge-aa,edge+aa,d));
     skin=mix(skin,vec3(.86,.90,.96),1.-smoothstep(-aa,aa,d));`,
   chromis:`
@@ -249,10 +258,10 @@ const SKIN={
     float stripe=exp(-line*line)*(1.-smoothstep(.22,.33,u));
     skin=mix(skin,vec3(1.00,.360,.070),stripe*.90);
     skin=mix(skin,vec3(.46,.14,.58),stripe*min(1.,abs(line))*.85);
-    // The terminal male: magenta head and peduncle over an olive-gold flank. The pale
+    // The terminal male: magenta head and peduncle over a rose-orange flank. The pale
     // square patch behind the pectoral belongs to P. pleurotaenia, not to this fish, so
     // it is deliberately absent; his one body mark is the red blotch on the pectoral fin.
-    vec3 male=mix(vec3(.62,.070,.190),vec3(.66,.290,.030),smoothstep(.13,.46,u));
+    vec3 male=mix(vec3(.62,.070,.190),vec3(.74,.250,.130),smoothstep(.13,.46,u));
     male=mix(male,vec3(.66,.105,.205),smoothstep(.60,.94,u));
     skin=mix(skin,mix(male,male*vec3(1.22,.88,1.18),smoothstep(.54,1.,band)),vTrim.y);`,
 };
@@ -265,8 +274,8 @@ const FINS={
     // outside it, and pelvics that are all but solid black. A flat membrane picks up far
     // more of the blue ambient than the curved flank beside it, so an orange mixed to
     // match the skin renders sand: these are cut back in green and blue to compensate.
-    vec3 web=mix(vec3(.62,.090,.002),vec3(.86,.170,.008),span);
-    web=mix(web,vec3(.011,.014,.018),smoothstep(.62,.85,span)*(1.-.70*tail)*(1.-paired+pelvic));
+    vec3 web=mix(vec3(.80,.150,.004),vec3(.98,.260,.012),span);
+    web=mix(web,vec3(.011,.014,.018),smoothstep(.74,.90,span)*(1.-.70*tail)*(1.-paired+pelvic));
     web=mix(web,vec3(.46,.48,.50),smoothstep(.95,1.,span)*(1.-paired));
     // The peduncle bar's black runs on across the base of the caudal, a third of the way out.
     web=mix(web,vec3(.011,.014,.018),tail*(1.-smoothstep(.20,.36,span)));
@@ -297,9 +306,9 @@ const SHEEN={clown:'vec3(.080,.085,.125)',chromis:'vec3(.090,.330,.430)',anthias
 // silver ring round a large dark pupil; both sexes of sea goldie carry the metallic
 // pink-violet orbital ring that runs straight on into the cheek stripe.
 const EYE={
-  clown:'vec3 iris=vec3(.96,.330,.012),rim=vec3(.28,.055,.004);',
-  chromis:'vec3 iris=vec3(.56,.64,.68),rim=vec3(.045,.330,.360);',
-  anthias:'vec3 iris=mix(vec3(.28,.46,.09),vec3(.44,.50,.055),vTrim.y),rim=mix(vec3(.58,.20,.58),vec3(.86,.18,.14),vTrim.y);',
+  clown:'vec3 iris=vec3(.90,.380,.030),rim=vec3(.10,.035,.012);',
+  chromis:'vec3 iris=vec3(.52,.58,.56),rim=vec3(.030,.110,.120);',
+  anthias:'vec3 iris=vec3(.86,.560,.120),rim=mix(vec3(.40,.16,.42),vec3(.46,.10,.20),vTrim.y);',
 };
 
 /** The skin, fin and eye shading for one species. Every animal of that species shares
@@ -335,28 +344,31 @@ function fishMaterial(kind) {
         transformed.x-=row*hinge*hinge*${n(stroke[1])};
       }
       ${kind==='anthias'?`// Both sexes carry the lyre and a prolonged third dorsal spine; on the terminal
-      // male the caudal lobes are drawn into filaments and that spine greatly elongated.
+      // male the lobe tips run out a little further and that spine stands about twice the
+      // fin height, not the whips the species is often drawn with.
       if(part>.5&&part<1.5){
-        if(position.x<${n(axis(kind,1))}){transformed.x-=fishTrim.w*.26*uv.y*smoothstep(.05,.22,abs(position.y));transformed.y+=sign(position.y)*fishTrim.w*.11*uv.y;}
-        else if(position.y>.10){float spine=uv.y*uv.y*exp(-pow((uv.x-.150)/.034,2.));transformed.y+=(.05+.42*fishTrim.w)*spine;transformed.x-=.34*fishTrim.w*spine;}
+        if(position.x<${n(axis(kind,1))}){float lobe=uv.y*uv.y*smoothstep(.12,.24,abs(position.y));transformed.x-=fishTrim.w*.12*lobe;transformed.y+=sign(position.y)*fishTrim.w*.035*lobe;}
+        else if(position.y>.10){float spine=uv.y*uv.y*exp(-pow((uv.x-.150)/.034,2.));transformed.y+=(.045+.11*fishTrim.w)*spine;transformed.x-=.05*fishTrim.w*spine;}
       }`:''}`,
     fragment:`varying float vPart;varying vec3 vAnatomy;varying vec2 vSkinUv;varying vec2 vTrim;`,
     color:`
-      float u=vSkinUv.x,band=vSkinUv.y,span=clamp(vSkinUv.y,0.,1.);
+      float u=vSkinUv.x,band=vSkinUv.y,span=clamp(vSkinUv.y,0.,1.),scaleEdge=0.;
       if(vPart<.5){
         ${SKIN[kind]}
         // The opercular margin and the mouth cleft are seams in the pigment, not geometry:
         // at this size a modelled gill cover would cost triangles nobody could resolve.
-        skin*=1.-.26*exp(-pow((u-(.255-.06*band))/.011,2.))*(1.-smoothstep(.78,1.,band));
+        // The gill cover's free edge bows back toward the pectoral base.
+        skin*=1.-.13*exp(-pow((u-(.215+.09*sin(3.1416*clamp(band,0.,1.))))/.009,2.))*(1.-smoothstep(.70,.95,band));
         float cleft=exp(-pow((band-(.60+2.6*u))/.045,2.))*(1.-smoothstep(.035,.085,u));
         skin=mix(skin,skin*.34,cleft*.8);
-        // Imbricate scale rows, faded out once a scale falls under a pixel. A damsel's
-        // scales are large and countable, an anthias' fine and each one centred on a gold
-        // spot — that speckle is most of what the flank of a sea goldie is.
+        // Imbricate scale rows: each scale's exposed free edge is an arc swept back over the
+        // one behind. Under mucus they are all but invisible as pigment and show as a break
+        // in the sheen, so the pattern mostly drives roughness below, and fades out once a
+        // scale falls under a pixel. Painted as dots they read as a polka-dot print.
         vec2 cell=vec2(u*${n(rows)},band*${n(files)});cell.x+=mod(floor(cell.y),2.)*.5;
-        float grain=1.-smoothstep(.42,1.15,max(fwidth(cell.x),fwidth(cell.y))),seam=length(fract(cell)-.5);
-        skin*=1.-${kind==='chromis'?'.165':'.115'}*smoothstep(.40,.50,seam)*grain;
-        ${kind==='anthias'?'skin+=vec3(.048,.030,.002)*(1.-smoothstep(.14,.30,seam))*grain*(1.+2.6*vTrim.y);':''}
+        vec2 tile=fract(cell)-.5;float lip=length(vec2(tile.x+.5,tile.y*1.15));
+        scaleEdge=smoothstep(.30,.0,abs(lip-.62))*(1.-smoothstep(.40,1.05,max(fwidth(cell.x),fwidth(cell.y))))*smoothstep(.08,.24,band);
+        skin*=1.-${kind==='chromis'?'.060':'.035'}*scaleEdge;
         // Countershading and a per-animal shift, so no two of a species read identical.
         skin*=1.-.34*(1.-smoothstep(0.,.11,band));
         skin*=vec3(.93+.14*vTrim.x,.96+.08*vTrim.x,1.03-.10*vTrim.x);
@@ -370,16 +382,20 @@ function fishMaterial(kind) {
         float axial=(${n(SNOUT)}-vAnatomy.x)/${n(SPECIES[kind].len)};
         ${FINS[kind]}
         // Bone splints stand proud of the membrane between them.
-        float rib=pow(.5+.5*cos(vSkinUv.x*${n(Math.PI*2*RAYS)}),26.);
-        diffuseColor.rgb=web*(.95+.11*rib)*(.94+.12*vTrim.x);
-        // Two cell layers on those splints: thickest at the hinge, thinnest at the free
-        // margin, and the paired fins thinner again than the median ones.
-        diffuseColor.a=clamp((${n(margin)}+${n(hinge-margin)}*(1.-span)+.06*rib)*(paired>.5?.62:1.),.16,1.);
+        float rib=pow(.5+.5*cos(vSkinUv.x*${n(Math.PI*2*RAYS)}),40.);
+        // Lifted above the skin's albedo for the light scattered through the thin membrane,
+        // so a fin edge-on to the lamps keeps its own colour rather than going brown.
+        diffuseColor.rgb=min(web*1.35,vec3(1.))*(.92+.22*rib)*(.94+.12*vTrim.x);
+        // The membrane between the splints is a couple of cell layers, clear enough to see
+        // the water through; the rays carry most of the opacity. Thickest at the hinge,
+        // thinnest at the free margin, and the paired fins thinner again.
+        diffuseColor.a=clamp((${n(margin)}+${n(hinge-margin)}*(1.-span))*(.74+.26*rib)*(paired>.5?.66:1.),.10,1.);
       }else{
         float r=length((vAnatomy.xy-vec2(${n(e.x)},${n(e.y)}))/${n(e.r)});
         ${EYE[kind]}
-        diffuseColor.rgb=mix(vec3(.004,.006,.008),iris*(1.22-.40*r),smoothstep(.38,.50,r));
-        diffuseColor.rgb=mix(diffuseColor.rgb,rim,smoothstep(.78,.94,r));
+        // A fish's pupil fills most of the eye: the iris is only a narrow ring round it.
+        diffuseColor.rgb=mix(vec3(.004,.005,.007),iris*(1.30-.45*r),smoothstep(.56,.64,r));
+        diffuseColor.rgb=mix(diffuseColor.rgb,rim,smoothstep(.80,.95,r));
         // A wet cornea always carries one small catchlight; without it the eye is a
         // printed dot, and at this size that reads before anything else does.
         diffuseColor.rgb+=vec3(.62,.64,.66)*exp(-dot((vAnatomy.xy-vec2(${n(e.x+e.r*.30)},${n(e.y+e.r*.32)}))/${n(e.r*.27)},(vAnatomy.xy-vec2(${n(e.x+e.r*.30)},${n(e.y+e.r*.32)}))/${n(e.r*.27)}));
@@ -389,18 +405,18 @@ function fishMaterial(kind) {
       if(vPart<.5){
         float fresnel=pow(1.-abs(dot(normal,normalize(vViewPosition))),3.4);
         float flank=smoothstep(.09,.33,vSkinUv.y)*(1.-smoothstep(.60,.92,vSkinUv.y));
-        diffuseColor.rgb+=${SHEEN[kind]}*fresnel*flank*(.75+.5*vTrim.x);
-        // The dorsal ridge and the belly keel are the two places the surface turns to face
-        // the lamps square on; scaleless skin there is matt, or the back reads as a
-        // painted white stripe under a tank light.
-        roughnessFactor=.50+.26*(1.-smoothstep(.05,.26,vSkinUv.y))+.14*smoothstep(.78,1.,vSkinUv.y);
+        diffuseColor.rgb+=${SHEEN[kind]}*fresnel*flank*(.75+.5*vTrim.x)*(1.-.45*scaleEdge);
+        // Mucus over scales is wet and glossy, and each scale's edge breaks the highlight,
+        // which is where the scales show at all. The dorsal ridge and the belly keel face
+        // the lamps square on; kept a little rougher, or the back reads as a white stripe.
+        roughnessFactor=.30+.22*(1.-smoothstep(.05,.26,vSkinUv.y))+.10*smoothstep(.78,1.,vSkinUv.y)+.12*scaleEdge;
       }else if(vPart>3.5)roughnessFactor=.06;
       else{
         // A fin is a membrane stretched between round splints, and it corrugates across
         // them. Left as one flat sheet it faces the lamps square on and takes a broad
         // specular wash the curved flank never gets, which bleaches every warm membrane
         // toward sand; corrugated, the rays catch the light one at a time instead.
-        normal=normalize(normal+vec3(.46,.20,0.)*sin(vSkinUv.x*${n(Math.PI*2*RAYS)}));
+        normal=normalize(normal+vec3(.14,.06,0.)*sin(vSkinUv.x*${n(Math.PI*2*RAYS)}));
         // Matt collagen: a glossy fin throws a hard white line along the back that no
         // fish has.
         roughnessFactor=.88;

@@ -9,17 +9,21 @@
   --plane-height: calc(var(--plane-width) / var(--preview-aspect));
   --caption-height: calc(var(--space-3) + var(--control-height));
   --plane-recession: translate3d(48%, -4%, -520px) rotateY(-18deg);
+  --plane-recession-left: translate3d(-48%, -4%, -520px) rotateY(18deg);
   --image-shadow: 0 32px 80px #00000066;
 }
 body { min-height: 100svh; }
-.masthead { position: relative; z-index: 2; display: flex; align-items: center; height: var(--masthead-height); width: min(100%, var(--gallery-width)); margin: 0 auto; padding: var(--space-8) var(--page-gutter); }
+/* The title shares the front image's left edge. */
+.masthead { position: relative; z-index: 2; display: flex; align-items: center; height: var(--masthead-height); width: min(100%, var(--gallery-width)); margin: 0 auto; padding: var(--space-8) max(var(--page-gutter), calc((min(100vw, var(--gallery-width)) - var(--plane-width)) / 2)); }
 h1, h2 { font: 400 var(--text-brand)/1 var(--font-body); letter-spacing: -.04em; margin: 0; }
 .masthead h1 { display: flex; align-items: center; gap: var(--space-3); }
-.logo-placeholder { width: var(--space-6); height: var(--space-6); flex: none; border-radius: 50%; background: currentColor; }
-.gallery { font-size: var(--text-body); position: relative; width: min(100%, var(--gallery-width)); height: max(calc(var(--plane-height) + var(--caption-height) + var(--space-12)), calc(100svh - var(--masthead-height))); margin: 0 auto; overflow: hidden; perspective: var(--image-depth); perspective-origin: 50% calc((100% - var(--caption-height)) / 2); touch-action: pan-y pinch-zoom; user-select: none; }
-/* JavaScript maps both planes onto one continuous carousel orbit. */
-.portal { display: block; position: absolute; width: var(--plane-width); left: var(--page-gutter); top: calc((100% - var(--plane-height) - var(--caption-height)) / 2); transform-origin: 65% 50%; transform: var(--plane-recession); cursor: pointer; }
+.logo { width: var(--space-6); height: var(--space-6); flex: none; }
+/* Full width, so neighbours recede to the window edges rather than a clipped column. */
+.gallery { font-size: var(--text-body); position: relative; width: 100%; height: max(calc(var(--plane-height) + var(--caption-height) + var(--space-12)), calc(100svh - var(--masthead-height))); margin: 0 auto; overflow: hidden; perspective: var(--image-depth); perspective-origin: 50% calc((100% - var(--caption-height)) / 2); touch-action: pan-y pinch-zoom; user-select: none; }
+/* JavaScript places the planes on one continuous ring; before it runs, neighbours recede to either side. */
+.portal { display: block; position: absolute; width: var(--plane-width); left: calc((100% - var(--plane-width)) / 2); top: calc((100% - var(--plane-height) - var(--caption-height)) / 2); transform: var(--plane-recession); cursor: pointer; }
 .gallery:not(.is-moving) .portal:not(.is-active):hover .portal-image, .gallery:not(.is-moving) .portal:not(.is-active):focus-visible .portal-image { filter: brightness(calc(var(--brightness, .45) + .1)); }
+.portal:last-child { transform: var(--plane-recession-left); }
 .portal.is-active { transform: translate3d(0,0,0); z-index: 1; }
 .gallery.is-dragging .portal { cursor: grabbing; }
 .portal-image { filter: brightness(var(--brightness, 1)); position: relative; background: var(--surface); height: var(--plane-height); overflow: hidden; box-shadow: var(--image-shadow); }

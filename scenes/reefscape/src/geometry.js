@@ -56,9 +56,14 @@ export function tube(points, radii, radial=7, bump=0) {
  *  many times a stem divides, so one builder covers staghorn, needle-fine
  *  birdsnest and stubby digitata growth forms. `reach` is how far a primary stem
  *  runs before its first fork: short reach with many roots gives the dense
- *  cauliflower clump an Acropora actually grows, not a hedge of long sticks. */
-export function coralBranches(origin,height,width,seed,color,tip='#cfe2f2',{thickness=.026,forks=6,roots=8,order=2,taper=.62,corallite=.14,rise=.64,blunt=.7,spread=.26,reach=.80,vary=.14}={}){
-  const rng=randomGenerator(seed),parts=[],base=V(...origin),c=new THREE.Color(color),tipColor=new THREE.Color(tip);
+ *  cauliflower clump an Acropora actually grows, not a hedge of long sticks.
+ *  `radials` is how many radial corallites stand per unit length of the two outer
+ *  orders, `glow` how pale the growing tips go. */
+export function coralBranches(origin,height,width,seed,color,tip='#cfe2f2',{thickness=.026,forks=6,roots=8,order=2,taper=.62,corallite=.14,rise=.64,blunt=.7,spread=.26,reach=.80,vary=.14,radials=0,glow=.34}={}){
+  const rng=randomGenerator(seed),parts=[],base=V(...origin),c=new THREE.Color(color),tipColor=new THREE.Color(tip),side=V(),other=V(),out=V();
+  const tissue=(p,start,dir,len,depth,shade,pale=0)=>{
+    const t=Math.max(0,Math.min(1,(p.y-origin[1])/height)),axial=Math.max(0,Math.min(1,((p.x-start.x)*dir.x+(p.y-start.y)*dir.y+(p.z-start.z)*dir.z)/len));
+    return c.clone().lerp(tipColor,Math.min(1,pale+(depth?.10*axial:.05+glow*smoothstep(.40,1,axial)))).multiplyScalar(shade*(.70+.34*t)+.10*noise(p.x*15,p.y*15,p.z*15)+.07*noise(p.x*4.5+seed,p.y*4.5,p.z*4.5));};
   function branch(start,dir,len,radius,depth){
     const pts=[],rs=[],bend=V((rng()-.5)*.28,.12,(rng()-.5)*.28),levels=depth?5:4,shade=.84+rng()*.32;
     for(let j=0;j<=levels;j++){const t=j/levels;pts.push(start.clone().addScaledVector(dir,len*t).addScaledVector(bend,len*t*t));rs.push(radius*(1-.42*t)*(1+.20*Math.sin(t*7+seed)));}
@@ -66,11 +71,19 @@ export function coralBranches(origin,height,width,seed,color,tip='#cfe2f2',{thic
     const end=pts.at(-1).clone();
     pts.push(end.clone().addScaledVector(dir,radius*(.50-.20*blunt)),end.clone().addScaledVector(dir,radius*(1.05-.45*blunt)),end.clone().addScaledVector(dir,radius*(1.5-.75*blunt)));
     rs.push(radius*(.42+.46*blunt),radius*(.22+.40*blunt),.001);
-    const g=tube(pts,rs,depth?6:5,corallite);
-    tint(g,p=>{
-      const t=Math.max(0,Math.min(1,(p.y-origin[1])/height)),axial=Math.max(0,Math.min(1,((p.x-start.x)*dir.x+(p.y-start.y)*dir.y+(p.z-start.z)*dir.z)/len));
-      return c.clone().lerp(tipColor,depth?.08*axial:.05+.34*smoothstep(.34,1,axial)).multiplyScalar(shade*(.74+.30*t)+.10*noise(p.x*15,p.y*15,p.z*15)+.07*noise(p.x*4.5+seed,p.y*4.5,p.z*4.5));});
-    parts.push(g);
+    const g=tube(pts,rs,depth?6:5,corallite);tint(g,p=>tissue(p,start,dir,len,depth,shade));parts.push(g);
+    // Radial corallites: short cups leaning towards the tip. They, not the stem, give an
+    // Acropora branch its bottlebrush outline, and each rim is paler than the stem it sits on.
+    if(radials&&depth<2){
+      side.crossVectors(dir,Math.abs(dir.y)<.9?V(0,1,0):V(1,0,0)).normalize();other.crossVectors(dir,side);
+      for(let k=0,n=Math.round(len*radials);k<n;k++){
+        const t=.08+.86*(k+rng())/n,a=rng()*Math.PI*2,r=radius*(1-.42*t),L=r*(.70+.55*rng()),rc=r*.36;
+        out.copy(side).multiplyScalar(Math.cos(a)).addScaledVector(other,Math.sin(a));
+        const cup=start.clone().addScaledVector(dir,len*t).addScaledVector(bend,len*t*t).addScaledVector(out,r*.75),d=out.clone().multiplyScalar(.80).addScaledVector(dir,.62).normalize();
+        const cupTube=tube([cup,cup.clone().addScaledVector(d,L),cup.clone().addScaledVector(d,L*1.05)],[rc,rc*.80,.001],3);
+        tint(cupTube,p=>tissue(p,start,dir,len,depth,shade,.30*Math.min(1,p.distanceTo(cup)/L)));parts.push(cupTube);
+      }
+    }
     if(depth===0)return;
     for(let j=0;j<forks;j++){
       const a=rng()*Math.PI*2,idx=Math.min(levels-1,2+Math.floor(j*.65));
@@ -85,6 +98,10 @@ export function coralBranches(origin,height,width,seed,color,tip='#cfe2f2',{thic
     const root=base.clone().add(V(Math.cos(a)*r,-r*.25,Math.sin(a)*r*.7));
     branch(root,V(Math.cos(a)*(.16+.60*rim),.95,Math.sin(a)*(.13+.48*rim)).normalize(),height*(reach-.30*rim*reach/.8+rng()*vary),height*thickness*(.9+rng()*.2),order);
   }
+  // The colony grows from an encrusting plate that spreads over the rock and swallows the
+  // stem bases, so no stick visibly stands in a hole.
+  const R=height*(spread*.62+thickness*1.5),foot=ellipsoid([base.x,base.y-R*.12,base.z],[R,R*.22,R*.72],seed,16);
+  tint(foot,p=>c.clone().multiplyScalar(.62+.10*noise(p.x*9,p.y*9,p.z*9)));parts.push(foot);
   return merge(parts);
 }
 /** Planar gorgonian: dichotomous forking confined to one gently bowed plane, so
@@ -135,20 +152,17 @@ export function massiveCoral(origin,scale,seed,color,groove,{ridges=14,relief=.1
     const drift=.86+.28*noise(q.x*2.4+seed,q.y*2.4,q.z*2.4)+.10*noise(q.x*9,q.y*9,q.z*9);
     return v.clone().lerp(c,smoothstep(.06,.52,wall(x/n,y/n,z/n))).multiplyScalar((.72+.26*y/n)*drift);});
 }
-/** One zoanthid: a short column under a ring of tentacles around a vivid mouth.
- *  Rings run bottom-up; the material renders both sides so the cup lights either way.
- *  `lean` tips the whole polyp off vertical — no two neighbours in a living mat stand
- *  at the same angle — and the base ring flares wider than the column so the mat meets
- *  the rock in a skirt rather than hovering on a cut cylinder. */
-export function polyp(center,radius,height,seed,mouth,disc,skirt,lean=[0,0]){
+/** One zoanthid of unit radius and height, standing on the origin, for instancing: a
+ *  column rising from a skirt sunk below the rock, a star of tentacles flaring past the
+ *  column, and a concave oral disc around a raised pale mouth. Rings run bottom-up; the
+ *  material renders both sides so the cup lights either way. */
+export function polyp(mouth,disc,skirt){
   const tips=12,pos=[],col=[],idx=[],m=new THREE.Color(mouth),d=new THREE.Color(disc),s=new THREE.Color(skirt);
-  const rng=randomGenerator(seed),tx=(rng()-.5)*radius*.3+lean[0]*height,tz=(rng()-.5)*radius*.3+lean[1]*height;
   const put=(x,y,z,c)=>{pos.push(x,y,z);col.push(c.r,c.g,c.b);};
-  const rings=[[.72,0,s.clone().multiplyScalar(.30),0],[.52,.20,s.clone().multiplyScalar(.52),0],[1,.62,s,1],[.72,.86,d,0],[.30,.92,m,0]];
+  const rings=[[.62,-.35,s.clone().multiplyScalar(.30),0],[.60,.40,s.clone().multiplyScalar(.70),0],[.74,.80,s,0],[1,.97,d.clone().lerp(m,.22),1],[.74,.92,d,0],[.36,.86,d.clone().multiplyScalar(.78),0]];
   for(const [r,h,c,star] of rings)
-    for(let i=0;i<=tips;i++){const a=i/tips*Math.PI*2,f=star&&i%2?.52:1;
-      put(center[0]+tx*h+Math.cos(a)*radius*r*f,center[1]+height*h,center[2]+tz*h+Math.sin(a)*radius*r*f,c);}
-  put(center[0]+tx,center[1]+height*.94,center[2]+tz,m.clone().multiplyScalar(1.12));
+    for(let i=0;i<=tips;i++){const a=i/tips*Math.PI*2,f=star&&i%2?.86:1;put(Math.cos(a)*r*f,h,Math.sin(a)*r*f,c);}
+  put(0,.90,0,m);
   for(let k=0;k<rings.length-1;k++)for(let i=0;i<tips;i++){const a=k*(tips+1)+i,b=a+tips+1;idx.push(a,b,a+1,a+1,b,b+1);}
   const last=(rings.length-1)*(tips+1),apex=rings.length*(tips+1);for(let i=0;i<tips;i++)idx.push(apex,last+i+1,last+i);
   const geo=new THREE.BufferGeometry();

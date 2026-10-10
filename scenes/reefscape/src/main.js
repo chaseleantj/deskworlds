@@ -1,4 +1,4 @@
-import { QUALITY_PRESETS as presets, qualityName, frameRate, framebufferSize, renderScale } from '../../shared/render-policy.js';
+import { QUALITY_PRESETS as presets, qualityName, activeQuality, frameRate, framebufferSize, renderScale } from '../../shared/render-policy.js';
 import { installControls, reportSceneError, preferredQuality } from '../../shared/controls.js';
 import { createComposite } from './composite.js';
 import * as THREE from 'three';
@@ -11,9 +11,9 @@ import { createParticles } from './particles.js';
 import { ReefSimulation, FIXED_STEP } from './simulation.js';
 import { views } from './views.js';
 import { createFrameLoop } from '../../shared/frame-loop.js';
-import { waterTime, LAMP } from './water.js';
+import { waterTime, LAMP, LAMP_RANGE } from './water.js';
 
-const canvas=document.querySelector('#scene'),habitat=document.querySelector('#habitat'),loading=document.querySelector('#loading');
+const canvas=document.querySelector('#scene'),stage=document.querySelector('#stage'),loading=document.querySelector('#loading');
 const params=new URLSearchParams(location.search),isHost=document.documentElement.dataset.motion==='host';
 const capture=params.has('capture');
 if(capture)document.body.classList.add('clean','capture');
@@ -22,11 +22,11 @@ let hostRate=60,onBattery=false,contextLost=false,disposed=false;
 let paused=capture||(!isHost&&matchMedia('(prefers-reduced-motion: reduce)').matches);
 let changeRate=()=>{},changePower=()=>{},feed=()=>{};
 // Installed before WebGL startup so host rate 0 cannot be lost during initialization.
-window.habitatRate=fps=>{if(!Number.isFinite(fps))return;const next=Math.max(0,Math.min(60,fps));if(next===hostRate)return;hostRate=next;changeRate();};
-window.habitatFeed=()=>feed();
-window.habitatPause=value=>{paused=Boolean(value);changeRate();};
+window.sceneRate=fps=>{if(!Number.isFinite(fps))return;const next=Math.max(0,Math.min(60,fps));if(next===hostRate)return;hostRate=next;changeRate();};
+window.sceneFeed=()=>feed();
+window.scenePause=value=>{paused=Boolean(value);changeRate();};
 // The Mac host knows the power source; a browser only sometimes does (see getBattery below).
-window.habitatPower=battery=>{const next=Boolean(battery);if(next===onBattery)return;onBattery=next;changePower();};
+window.scenePower=battery=>{const next=Boolean(battery);if(next===onBattery)return;onBattery=next;changePower();};
 
 
 
@@ -35,17 +35,21 @@ async function start(){
   renderer.setPixelRatio(1);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
   renderer.shadowMap.enabled=true;renderer.shadowMap.needsUpdate=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.info.autoReset=false;
   const scene=new THREE.Scene();scene.background=new THREE.Color('#04101d');
-  // Reef LEDs: a cool white key with a violet actinic wash from above. Warm tones come only
-  // from the animals and coral tissue themselves. The ground half of the hemisphere stands
-  // in for the bounce off the bright aragonite bed, so the shaded side of a coral branch
-  // reads as tissue in shadow rather than a black stick. The sky half is the water column
-  // itself, deep indigo, and kept low: what the lamp does not reach stays dark.
-  scene.add(new THREE.HemisphereLight('#5a63c8','#4d4736',.46));
-  const sun=new THREE.DirectionalLight('#f6f0e0',3.9);sun.position.set(LAMP.x,LAMP.y,LAMP.z).multiplyScalar(14.2);sun.target.position.set(0,0,0);sun.castShadow=true;
+  // Reef LEDs: a warm-white key from overhead, so the tops of rock, coral and fish catch
+  // the light and everything under an edge falls into the water's blue, with a violet
+  // actinic wash from above. The ground half of the hemisphere stands in for the bounce off
+  // the bright aragonite bed, so the shaded side of a coral branch reads as tissue in shadow
+  // rather than a black stick. The sky half is the water column itself, deep blue, and kept
+  // low: what the lamp does not reach stays dark.
+  scene.add(new THREE.HemisphereLight('#3c56c0','#4a4636',.42));
+  const sun=new THREE.DirectionalLight('#ffdfba',4.3);sun.position.set(LAMP.x,LAMP.y,LAMP.z).multiplyScalar(LAMP_RANGE);sun.target.position.set(0,0,0);sun.castShadow=true;
   sun.shadow.mapSize.set(1536,1536);Object.assign(sun.shadow.camera,{left:-12,right:12,top:10,bottom:-9,near:1,far:43});sun.shadow.bias=-.0007;sun.shadow.normalBias=.018;sun.shadow.radius=2;sun.shadow.intensity=.86;
   scene.add(sun,sun.target);
   const actinic=new THREE.DirectionalLight('#4f6dff',.78);actinic.position.set(3,12,-2);scene.add(actinic);
-  const bounce=new THREE.DirectionalLight('#7f8fd0',.22);bounce.position.set(3,6,8);scene.add(bounce);
+  const bounce=new THREE.DirectionalLight('#7f8fd0',.18);bounce.position.set(3,6,8);scene.add(bounce);
+  // The lamp's light scattered forward by the water behind a subject comes back toward the
+  // camera from the far side: a cool rim on the backs of fish and along the crests of rock.
+  const rim=new THREE.DirectionalLight('#7fc4ff',1.1);rim.position.set(1.5,6,-9);scene.add(rim);
   // The key light's shadow map, read by the motes so they go dark where the lamp is
   // blocked. The texture only exists once the first beauty pass has drawn it, so render()
   // fills it in.
@@ -68,7 +72,7 @@ async function start(){
   function applyView(name){const v=views[name];view=name;camera.position.set(...v.position);camera.lookAt(...v.target);camera.fov=v.fov;camera.updateProjectionMatrix();syncPostCamera();}
   // The beauty pass lands in an HDR target; a short screen-space pass adds contact occlusion
   // where rock meets sand and coral meets rock, then a light vignette, before tone mapping.
-  const { target, post, postScene, postCamera } = createComposite(camera);
+  const { target, post, postScene, postCamera } = createComposite(camera,shadow);
   applyView(view);
   const envData=new Uint8Array(128*64*4);
   for(let y=0;y<64;y++)for(let x=0;x<128;x++){
@@ -139,11 +143,11 @@ async function start(){
   changeRate=restart;
   changePower=()=>{resize();restart();};
   function resize(draw=true){
-    const width=habitat.clientWidth,height=habitat.clientHeight,preset=presets[quality];
+    const width=stage.clientWidth,height=stage.clientHeight,active=activeQuality(quality,onBattery),preset=presets[active];
     const wasZeroSize=zeroSize;
     zeroSize=!(width>0&&height>0);
     if(zeroSize){restart();return;}
-    anemone.setQuality(quality);
+    anemone.setQuality(active);
     ratio=renderScale(quality,devicePixelRatio,onBattery)*autoScale;
     const {width:w,height:h}=framebufferSize(width,height,ratio,renderer.capabilities.maxTextureSize,preset.pixels);ratio=w/width;renderer.setSize(w,h,false);target.setSize(w,h);post.uniforms.size.value.set(w,h);post.uniforms.aoRadiusScale.value=h/972;
     camera.aspect=width/height;
@@ -158,7 +162,7 @@ async function start(){
     if(wasZeroSize)restart();
     if(draw&&!document.hidden)render();
   }
-  const observer=new ResizeObserver(()=>resize());observer.observe(habitat);
+  const observer=new ResizeObserver(()=>resize());observer.observe(stage);
   resize(false);
 
   let pointer=null,lastPointer=0;const point=new THREE.Vector3(),lastPoint=new THREE.Vector3(),ndc=new THREE.Vector2(),raycaster=new THREE.Raycaster();
@@ -173,8 +177,8 @@ async function start(){
   canvas.addEventListener('pointerleave',()=>{pointer=null;});
   canvas.addEventListener('pointerdown',event=>{if(event.button!==0||!running()||!project(event))return;simulation.feed(point.x,1);});
   feed=()=>{if(running())simulation.feed(-2.6+Math.sin(simulation.time*.73)*1.7,1.3);};
-  updateControls=installControls({habitat,isPaused:()=>paused,isRunning:running,
-    pause:window.habitatPause,feed,quality:()=>quality,
+  updateControls=installControls({stage,isPaused:()=>paused,isRunning:running,
+    pause:window.scenePause,feed,quality:()=>quality,
     setQuality(value){quality=qualityName(value);autoScale=1;resize();restart();},
   });
   document.addEventListener('visibilitychange',()=>{pointer=null;if(!document.hidden){resize(false);if(paused)render();}restart();});
@@ -200,10 +204,10 @@ async function start(){
     advance(seconds){if(!paused)throw new Error('Pause before advancing deterministic capture time.');if(!Number.isFinite(seconds)||seconds<0||seconds>120)throw new RangeError('Advance must be 0–120 seconds.');for(let i=0;i<Math.round(seconds/FIXED_STEP);i++)simulation.step(FIXED_STEP);sync(seconds);render();},
     feed:()=>feed(),
   };
-  window.habitatStats=window.reef.diagnostics;
+  window.sceneStats=window.reef.diagnostics;
   if(params.get('diagnostics')==='1'){
     const {installDiagnostics}=await import('../../shared/diagnostics.js');
-    installDiagnostics({renderer,loop,renderFrame,stats:window.habitatStats});
+    installDiagnostics({renderer,loop,renderFrame,stats:window.sceneStats});
   }
   // Release owned GPU objects and stop callbacks when a page is really discarded.
   // BFCache pages retain resources and restart from their old simulation time.
