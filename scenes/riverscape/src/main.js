@@ -28,7 +28,7 @@ let profile = query.get("quality") === "reference" ? "reference" : preferredQual
 if (query.get("still") === "1") paused = true;
 let onBattery = false;
 let settings = renderSettings({ profile, wallpaper, pixelRatio: devicePixelRatio });
-let requestedRate = wallpaper ? 0 : 60;
+let requestedRate = 60;
 let loop = null, applyPower = null, updateControls = () => {};
 window.scenePause = (value) => { paused = Boolean(value); loop?.setPaused(paused); updateControls(); };
 window.sceneRate = (fps) => {

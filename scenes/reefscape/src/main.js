@@ -18,7 +18,7 @@ const params=new URLSearchParams(location.search),isHost=document.documentElemen
 const capture=params.has('capture');
 if(capture)document.body.classList.add('clean','capture');
 let quality=preferredQuality(params);
-let hostRate=isHost?0:60,onBattery=false,contextLost=false,disposed=false;
+let hostRate=60,onBattery=false,contextLost=false,disposed=false;
 let paused=capture||(!isHost&&matchMedia('(prefers-reduced-motion: reduce)').matches);
 let changeRate=()=>{},changePower=()=>{},feed=()=>{};
 // Installed before WebGL startup so host rate 0 cannot be lost during initialization.
