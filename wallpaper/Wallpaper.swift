@@ -536,8 +536,15 @@ final class Controller: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
   private func exposure(_ frame: CGRect, blockers: [CGRect]) -> Double {
     guard !blockers.isEmpty else { return 1 }
+    // Window bounds arrive in Quartz coordinates, which share Cocoa's x-axis but
+    // grow downward from the top of the whole arrangement. The first screen's
+    // height is that top only when every display matches it and sits on the same
+    // baseline: with a taller or stacked display this screen's samples land on
+    // another screen's windows, so a fullscreen app on one display reads as
+    // covering the other, and its window keeps that display stopped afterwards.
+    let top = NSScreen.screens.map(\.frame.maxY).max() ?? frame.maxY
     let flipped = CGRect(
-      x: frame.minX, y: (NSScreen.screens.first?.frame.height ?? frame.maxY) - frame.maxY,
+      x: frame.minX, y: top - frame.maxY,
       width: frame.width, height: frame.height)
     let columns = 16, rows = 10
     var free = 0
