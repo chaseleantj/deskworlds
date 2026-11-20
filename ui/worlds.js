@@ -8,6 +8,7 @@ export const WORLDS = Object.freeze([
   { id: 'koiscape', name: 'Koi pond', alt: 'Koi of several colours gliding through dark water under lily pads, seen from above' },
   { id: 'bonfirescape', name: 'Bonfire', alt: 'A bonfire burning in the dark, a coiled sword driven into its charred logs and sparks rising' },
   { id: 'lakescape', name: 'Lake storm', alt: 'A rain-streaked cabin window at night: a porch rail hung with warm lights, two chairs by a fire pit on the beach, and lightning over a mountain lake' },
+  { id: 'blossomscape', name: 'Cherry blossom', alt: 'An old cherry tree in blossom on a rocky islet in a still lake at night, small under a sky of star trails wheeling about a bright pole star, its petals drifting on the water' },
 ]);
 
 const root = new URL('../', import.meta.url);

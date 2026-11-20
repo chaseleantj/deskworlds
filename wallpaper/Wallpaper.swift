@@ -19,7 +19,7 @@ let sceneHost = "local"
 
 /// The scenes the app can show, each a directory under scenes/ with a wallpaper.html.
 enum World: String, CaseIterable {
-  case riverscape, reefscape, bettascape, plasmascape, koiscape, bonfirescape, lakescape
+  case riverscape, reefscape, bettascape, plasmascape, koiscape, bonfirescape, lakescape, blossomscape
 
   var title: String {
     switch self {
@@ -30,15 +30,17 @@ enum World: String, CaseIterable {
     case .koiscape: "Koi pond"
     case .bonfirescape: "Bonfire"
     case .lakescape: "Lake storm"
+    case .blossomscape: "Cherry blossom"
     }
   }
   /// Only worlds with something to eat have anything to feed; the bonfire is stirred
-  /// instead, and the lake storm's rail lights are switched.
+  /// instead, the lake storm's rail lights are switched, and the cherry tree is sent a breeze.
   var canFeed: Bool { self != .plasmascape }
   var feedTitle: String {
     switch self {
     case .bonfirescape: "Stir the Fire"
     case .lakescape: "Holiday Lights"
+    case .blossomscape: "Send a Breeze"
     default: "Feed"
     }
   }
@@ -58,6 +60,7 @@ enum World: String, CaseIterable {
     case .bettascape, .plasmascape, .bonfirescape: .black
     case .koiscape: NSColor(calibratedRed: 0.016, green: 0.024, blue: 0.02, alpha: 1)
     case .lakescape: NSColor(calibratedRed: 0.02, green: 0.027, blue: 0.043, alpha: 1)
+    case .blossomscape: NSColor(calibratedRed: 0.012, green: 0.031, blue: 0.039, alpha: 1)
     }
   }
 

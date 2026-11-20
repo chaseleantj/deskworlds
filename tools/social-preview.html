@@ -35,7 +35,7 @@
     <script type="module">
       import { WORLDS, previewUrl } from '../ui/worlds.js';
       const card = document.querySelector('.card');
-      const ORDER = ['lakescape', 'plasmascape', 'riverscape', 'bonfirescape', 'reefscape', 'bettascape', 'koiscape'];
+      const ORDER = ['lakescape', 'plasmascape', 'riverscape', 'bonfirescape', 'blossomscape', 'reefscape', 'bettascape', 'koiscape'];
       const ring = ORDER.map(id => WORLDS.find(world => world.id === id)).filter(Boolean);
       const front = ring.findIndex(world => world.id === 'riverscape');
       // The ring from ui/gallery.js: the front world faces the viewer, its neighbours recede to either side.

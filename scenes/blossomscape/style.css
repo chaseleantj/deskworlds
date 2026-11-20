@@ -1,0 +1,3 @@
+@import url("../../ui/scene.css");
+/* A night sky over still water: the page around it is the same teal-black. */
+:root { --background: #03080a; }
