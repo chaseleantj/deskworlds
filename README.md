@@ -1,6 +1,6 @@
 # Deskworlds
 
-[![Watch Riverbed](docs/images/riverscape.gif)](docs/videos/riverscape.mp4)
+[![Riverbed, Bonfire, Plasma globe and Cherry blossom on a Mac desktop, each answering the cursor](docs/images/deskworlds.gif)](docs/videos/deskworlds.mp4)
 
 Deskworlds puts a small living 3D world on your Mac desktop. The creatures in each world react to your cursor, and you can feed them from the menu bar. Everything runs locally with Three.js and WebGL2, with no account, analytics or internet connection.
 
