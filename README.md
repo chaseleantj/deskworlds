@@ -4,15 +4,6 @@
 
 Deskworlds puts a small living 3D world on your Mac desktop. The creatures in each world react to your cursor, and you can feed them from the menu bar. Everything runs locally with Three.js and WebGL2, with no account, analytics or internet connection.
 
-## Worlds
-
-| | |
-| --- | --- |
-| ![Riverbed](docs/images/riverscape-wide.png) **Riverbed** | ![Coral reef](docs/images/reefscape-wide.png) **Coral reef** |
-| ![Betta](docs/images/bettascape-wide.png) **Betta** | ![Plasma globe](docs/images/plasmascape-wide.png) **Plasma globe** |
-| ![Koi pond](docs/images/koiscape-wide.png) **Koi pond** | ![Bonfire](docs/images/bonfirescape-wide.png) **Bonfire** |
-| ![Lake storm](docs/images/lakescape-wide.png) **Lake storm** | ![Cherry blossom](docs/images/blossomscape-wide.png) **Cherry blossom** |
-
 ## Install on Mac
 
 You need macOS 13 or newer and the Xcode command line tools (`xcode-select --install`). Clone the repository, then run this from the project folder:
